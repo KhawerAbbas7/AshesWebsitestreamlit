@@ -27,8 +27,7 @@ st.markdown("""
     .stTabs [data-baseweb="tab-border"] { background-color: #ddd !important; height: 1px; }
     button[data-testid="stBaseButton-secondary"] { background: #fff !important; border: 1px solid #ccc !important; color: #333 !important; }
     button[data-testid="stBaseButton-secondary"]:hover { background: #f4f4f4 !important; border-color: #999 !important; }
-    div[data-testid="stHorizontalBlock"] { flex-wrap: nowrap !important; gap: 0.5rem; }
-    div[data-testid="stHorizontalBlock"] > div { min-width: 0 !important; }
+    .match-scorecard-btn > div > button { margin-top: -0.6rem !important; border-radius: 0 0 2px 2px !important; }
   </style>
 """, unsafe_allow_html=True)
 @st.cache_data(ttl=30)
@@ -245,30 +244,29 @@ def page_list():
     guild = match.get("guildName", "")
     channel = match.get("channelName", "")
     time_span = f'<span class="ts" data-ts="{ts}"></span> ' if ts else ""
-    c1, c2 = st.columns([10, 2])
-    with c1:
-      components.html(f"""
-        <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700;900&display=swap" rel="stylesheet">
-        <div style="background:#fff;border:1px solid #e0e0e0;border-left:4px solid #CC0000;padding:1rem 1.2rem;box-shadow:0 1px 3px rgba(0,0,0,0.05);font-family:'Roboto',sans-serif;">
-          <div style="font-size:0.68rem;font-weight:700;color:#666;text-transform:uppercase;margin-bottom:0.25rem;">{time_span}{guild} | {channel}</div>
-          <div style="font-size:1.15rem;font-weight:900;color:#000;text-transform:uppercase;margin-bottom:0.4rem;">
-            {team_a} {ta_str} <span style="color:#ccc;font-weight:900;font-size:0.9rem;margin:0 0.3rem;">VS</span> {team_b} {tb_str}
-          </div>
-          <div style="display:inline-flex;align-items:center;background:#f4f4f4;border:1px solid #ddd;color:#000;font-size:0.72rem;font-weight:700;padding:0.25rem 0.7rem;border-radius:2px;text-transform:uppercase;">
-            <span style="color:#CC0000;margin-right:5px;font-weight:900;">RESULT:</span>{res_text}
-          </div>
+    components.html(f"""
+      <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700;900&display=swap" rel="stylesheet">
+      <div style="background:#fff;border:1px solid #e0e0e0;border-left:4px solid #CC0000;padding:1rem 1.2rem;box-shadow:0 1px 3px rgba(0,0,0,0.05);font-family:'Roboto',sans-serif;">
+        <div style="font-size:0.68rem;font-weight:700;color:#666;text-transform:uppercase;margin-bottom:0.25rem;">{time_span}{guild} | {channel}</div>
+        <div style="font-size:1.15rem;font-weight:900;color:#000;text-transform:uppercase;margin-bottom:0.4rem;">
+          {team_a} {ta_str} <span style="color:#ccc;font-weight:900;font-size:0.9rem;margin:0 0.3rem;">VS</span> {team_b} {tb_str}
         </div>
-        <script>
-          document.querySelectorAll('.ts').forEach(function(el) {{
-            el.textContent = new Date(parseInt(el.getAttribute('data-ts')) * 1000).toLocaleString([], {{dateStyle:'medium', timeStyle:'short'}});
-          }});
-        </script>
-      """, height=105)
-    with c2:
-      st.markdown("<div style='height:1.9rem'></div>", unsafe_allow_html=True)
-      if st.button("Scorecard", key=f"sc_{mid}", use_container_width=True):
-        st.query_params["id"] = mid
-        st.rerun()
+        <div style="display:inline-flex;align-items:center;background:#f4f4f4;border:1px solid #ddd;color:#000;font-size:0.72rem;font-weight:700;padding:0.25rem 0.7rem;border-radius:2px;text-transform:uppercase;">
+          <span style="color:#CC0000;margin-right:5px;font-weight:900;">RESULT:</span>{res_text}
+        </div>
+      </div>
+      <script>
+        document.querySelectorAll('.ts').forEach(function(el) {{
+          el.textContent = new Date(parseInt(el.getAttribute('data-ts')) * 1000).toLocaleString([], {{dateStyle:'medium', timeStyle:'short'}});
+        }});
+      </script>
+    """, height=105)
+    st.markdown("<div class='match-scorecard-btn'>", unsafe_allow_html=True)
+    if st.button("Scorecard →", key=f"sc_{mid}", use_container_width=True):
+      st.query_params["id"] = mid
+      st.rerun()
+    st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown("<div style='height:0.8rem'></div>", unsafe_allow_html=True)
 params = st.query_params
 match_id = params.get("id", None)
 if match_id:
