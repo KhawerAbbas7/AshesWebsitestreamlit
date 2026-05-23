@@ -24,6 +24,13 @@ st.markdown("""
     .stTabs [data-baseweb="tab"] { font-family: 'Roboto', sans-serif; font-weight: 700; font-size: 0.9rem; padding: 10px 16px; border-radius: 4px 4px 0 0; background: #f4f4f4; color: #666; border: 1px solid #ddd; border-bottom: none; }
     .stTabs [aria-selected="true"] { background: #fff; color: #CC0000; border-top: 3px solid #CC0000; border-left: 1px solid #ddd; border-right: 1px solid #ddd; border-bottom: 1px solid #fff; margin-bottom: -1px; }
     .stTabs [data-baseweb="tab-border"] { background-color: #ddd !important; height: 1px; }
+    div[data-testid="stHorizontalBlock"] > div:nth-child(2) > div > div > button[kind="secondary"],
+    div[data-testid="stHorizontalBlock"] > div:nth-child(2) > div > div > button {
+      background: #fff !important; border: 1px solid #ccc !important; color: #000 !important;
+    }
+    div[data-testid="stHorizontalBlock"] > div:nth-child(2) > div > div > button:hover {
+      background: #f4f4f4 !important; border-color: #999 !important; color: #000 !important;
+    }
   </style>
 """, unsafe_allow_html=True)
 @st.cache_data(ttl=30)
@@ -204,11 +211,20 @@ def page_scorecard(match_id):
 def page_list():
   render_header()
   st.markdown("<div style='height:1rem'></div>", unsafe_allow_html=True)
-  f1, f2, f3, f4 = st.columns(4)
-  with f1: query = st.text_input("Query", placeholder="Search matches...", label_visibility="collapsed")
-  with f2: guild_id = st.text_input("Server", placeholder="Server ID (Optional)", label_visibility="collapsed")
-  with f3: channel_id = st.text_input("Channel", placeholder="Channel ID (Optional)", label_visibility="collapsed")
-  with f4: player_id = st.text_input("Player", placeholder="Player ID (Optional)", label_visibility="collapsed")
+  s1, s2 = st.columns([10, 2])
+  with s1:
+    query = st.text_input("Query", placeholder="Search matches...", label_visibility="collapsed")
+  with s2:
+    if st.button("⚙ Filters", use_container_width=True):
+      st.session_state["show_filters"] = not st.session_state.get("show_filters", False)
+  guild_id = ""
+  channel_id = ""
+  player_id = ""
+  if st.session_state.get("show_filters", False):
+    f1, f2, f3 = st.columns(3)
+    with f1: guild_id = st.text_input("Server", placeholder="Server ID", label_visibility="collapsed")
+    with f2: channel_id = st.text_input("Channel", placeholder="Channel ID", label_visibility="collapsed")
+    with f3: player_id = st.text_input("Player", placeholder="Player ID", label_visibility="collapsed")
   matches = fetch_matches(query, channel_id, guild_id, player_id)
   if not matches:
     st.markdown("<p style='color:#000;font-size:1.2rem;font-weight:900;text-align:center;margin-top:4rem;text-transform:uppercase;'>No Results Found</p>", unsafe_allow_html=True)
