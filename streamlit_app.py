@@ -208,7 +208,7 @@ def page_list():
       """, unsafe_allow_html=True)
     with c2:
       st.markdown("<div style='height:1.6rem'></div>", unsafe_allow_html=True)
-      if st.button("Box Score", key=mid, use_container_width=True):
+      if st.button("Scorecard", key=mid, use_container_width=True):
         st.query_params["id"] = mid
         st.rerun()
 params = st.query_params
