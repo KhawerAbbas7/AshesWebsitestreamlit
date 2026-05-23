@@ -244,8 +244,8 @@ def page_list():
       if inn.get("isDeclared"): score += "d"
       if inn.get("battingTeam") == team_a: ta_scores.append(score)
       elif inn.get("battingTeam") == team_b: tb_scores.append(score)
-    ta_str = f"<span style='color:#CC0000;font-size:1.1rem;margin-left:0.4rem;'>{' &amp; '.join(ta_scores)}</span>" if ta_scores else ""
-    tb_str = f"<span style='color:#CC0000;font-size:1.1rem;margin-left:0.4rem;'>{' &amp; '.join(tb_scores)}</span>" if tb_scores else ""
+    ta_str = f"<span style='color:#CC0000;font-size:1.1rem;margin-left:0.4rem;'>{' & '.join(ta_scores)}</span>" if ta_scores else ""
+    tb_str = f"<span style='color:#CC0000;font-size:1.1rem;margin-left:0.4rem;'>{' & '.join(tb_scores)}</span>" if tb_scores else ""
     res_text = get_result_text(match)
     guild = match.get("guildName", "")
     channel = match.get("channelName", "")
