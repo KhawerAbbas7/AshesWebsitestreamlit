@@ -16,7 +16,7 @@ st.markdown("""
     .stButton > button:hover { background: #990000; color: #fff; }
     .stTextInput > div > input { background: #fff; border: 1px solid #ccc; color: #000; font-family: 'Roboto', sans-serif; font-size: 0.9rem; border-radius: 2px; padding: 0.5rem 0.8rem; }
     .stTextInput > div > input:focus { border-color: #CC0000; box-shadow: 0 0 0 1px #CC0000; }
-    div[data-testid="stTextInput"]:has(input[placeholder="__nav__"]) { display: none !important; }
+    div[data-testid="stTextInput"]:has(input[placeholder="__nav__"]) { visibility: hidden; height: 0; margin: 0; padding: 0; }
     table.custom-table { width: 100%; border-collapse: collapse; background: #fff; margin-bottom: 1rem; }
     table.custom-table th { border-bottom: 2px solid #e0e0e0; padding: 0.6rem; color: #666; font-size: 0.75rem; text-transform: uppercase; text-align: left; font-weight: 700; }
     table.custom-table td { border-bottom: 1px solid #eee; padding: 0.6rem; font-size: 0.85rem; color: #000; }
@@ -27,7 +27,7 @@ st.markdown("""
     .stTabs [aria-selected="true"] { background: #fff; color: #CC0000; border-top: 3px solid #CC0000; border-left: 1px solid #ddd; border-right: 1px solid #ddd; border-bottom: 1px solid #fff; margin-bottom: -1px; }
     .stTabs [data-baseweb="tab-border"] { background-color: #ddd !important; height: 1px; }
     button[data-testid="stBaseButton-secondary"] { background: #fff !important; border: 1px solid #ccc !important; color: #333 !important; }
-    button[data-testid="stBaseButton-secondary"]:hover { background: #f4f4f4 !important; border-color: #999 !important; color: #000 !important; }
+    button[data-testid="stBaseButton-secondary"]:hover { background: #f4f4f4 !important; border-color: #999 !important; }
   </style>
 """, unsafe_allow_html=True)
 @st.cache_data(ttl=30)
@@ -259,7 +259,7 @@ def page_list():
           <div style="display:inline-flex;align-items:center;background:#f4f4f4;border:1px solid #ddd;color:#000;font-size:0.72rem;font-weight:700;padding:0.25rem 0.7rem;border-radius:2px;text-transform:uppercase;">
             <span style="color:#CC0000;margin-right:5px;font-weight:900;">RESULT:</span>{res_text}
           </div>
-          <button onclick="window.parent.postMessage({{type:'ashes_nav',id:'{mid}'}},'*')" style="background:#CC0000;border:none;color:#fff;font-family:'Roboto',sans-serif;font-size:0.75rem;font-weight:700;padding:0.3rem 1.1rem;border-radius:2px;text-transform:uppercase;cursor:pointer;letter-spacing:0.5px;">SCORECARD</button>
+          <button onclick="navigate('{mid}')" style="background:#CC0000;border:none;color:#fff;font-family:'Roboto',sans-serif;font-size:0.75rem;font-weight:700;padding:0.3rem 1.1rem;border-radius:2px;text-transform:uppercase;cursor:pointer;letter-spacing:0.5px;">SCORECARD</button>
         </div>
       </div>
     """
@@ -270,22 +270,15 @@ def page_list():
       document.querySelectorAll('.ts').forEach(function(el) {{
         el.textContent = new Date(parseInt(el.getAttribute('data-ts')) * 1000).toLocaleString([], {{dateStyle:'medium', timeStyle:'short'}});
       }});
-    </script>
-  """, height=len(matches) * 115 + 20, scrolling=False)
-  components.html("""
-    <script>
-      window.addEventListener('message', function(e) {
-        if (!e.data || e.data.type !== 'ashes_nav') return;
-        var id = e.data.id;
-        var inputs = window.parent.document.querySelectorAll('input[placeholder="__nav__"]');
-        if (!inputs.length) return;
-        var inp = inputs[0];
+      function navigate(id) {{
+        var inp = window.parent.document.querySelector('input[placeholder="__nav__"]');
+        if (!inp) return;
         var setter = Object.getOwnPropertyDescriptor(window.parent.HTMLInputElement.prototype, 'value').set;
         setter.call(inp, id);
-        inp.dispatchEvent(new Event('input', {bubbles: true}));
-      });
+        inp.dispatchEvent(new Event('input', {{bubbles: true}}));
+      }}
     </script>
-  """, height=0)
+  """, height=len(matches) * 115 + 20, scrolling=False)
 params = st.query_params
 match_id = params.get("id", None)
 if match_id:
