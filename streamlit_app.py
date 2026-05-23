@@ -56,6 +56,7 @@ def get_result_text(match):
   w = match.get("winner", "—")
   if w.lower() in ["drawn", "—", "tie", "tied"]: return w
   inns = match.get("innings", [])
+  maxWick = max([i['wickets'] for i in inns])
   if len(inns) > 2:
     l = match.get("teamBName") if w == match.get("teamAName") else match.get("teamAName")
     wr = sum(i.get("runs", 0) for i in inns if i.get("battingTeam") == w)
@@ -63,7 +64,7 @@ def get_result_text(match):
     if len(inns) == 3 and sum(1 for i in inns if i.get("battingTeam") == w) == 1:
       return f"{w} won by an innings and {wr - lr} runs"
     if inns[-1].get("battingTeam") == w:
-      return f"{w} won by {10 - inns[-1].get('wickets', 0)} wickets"
+      return f"{w} won by {maxWick - inns[-1].get('wickets', 0)} wickets"
     return f"{w} won by {wr - lr} runs"
   return w
 def render_header():
