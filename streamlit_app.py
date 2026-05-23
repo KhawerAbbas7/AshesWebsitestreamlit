@@ -37,7 +37,8 @@ query=st.text_input("Search matches")
 if st.session_state.page=="list":
   filtered=matches
   if query:
-    filtered=[m for m in matches if query.lower() in str(m).lower()]
+    data=fetch_matches(query)
+    filtered=data.get("Matches",[])
   for match in filtered:
     col1,col2,col3=st.columns([4,1,1])
     ts=match.get("timestamp",0)
