@@ -111,7 +111,7 @@ def render_innings(inning, idx):
 def page_scorecard(match_id):
   render_header()
   st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
-  if st.button("← Box Scores"):
+  if st.button("← Matches"):
     st.query_params.clear()
     st.rerun()
   with st.spinner("Loading box score..."):
