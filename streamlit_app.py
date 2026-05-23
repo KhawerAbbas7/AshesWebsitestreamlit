@@ -165,7 +165,7 @@ def page_scorecard(match_id):
       <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@700;900&display=swap" rel="stylesheet">
       <div style="background:#fff;border:1px solid #ddd;border-top:3px solid #CC0000;padding:1rem;">
         <div style="font-size:0.65rem;font-weight:700;color:#666;text-transform:uppercase;margin-bottom:0.4rem;font-family:'Roboto',sans-serif;">Winner</div>
-        <div style="font-family:'Roboto',sans-serif;font-size:1.1rem;font-weight:900;color:#000;text-transform:uppercase;">🏆 {winner}</div>
+        <div style="font-family:'Roboto',sans-serif;font-size:1.1rem;font-weight:900;color:#000;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">🏆 {winner}</div>
       </div>
     """, height=85)
   with mc2:
@@ -177,7 +177,7 @@ def page_scorecard(match_id):
         <div style="font-size:0.65rem;font-weight:700;color:#666;text-transform:uppercase;margin-bottom:0.4rem;font-family:'Roboto',sans-serif;">Player of the Match</div>
         <div style="display:flex;align-items:center;gap:0.5rem;">
           <img src="{avatar}" style="width:24px;height:24px;border-radius:50%;object-fit:cover;" onerror="this.style.display='none'">
-          <span style="font-family:'Roboto',sans-serif;font-size:1.1rem;font-weight:900;color:#000;text-transform:uppercase;">{name}</span>
+          <span style="font-family:'Roboto',sans-serif;font-size:1.1rem;font-weight:900;color:#000;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{name}</span>
         </div>
       </div>
     """, height=85)
@@ -194,15 +194,16 @@ def page_scorecard(match_id):
         if inn.get("isDeclared"):
           score += "d"
         pills += (
-          '<div style="flex:1;min-width:90px;text-align:center;border-right:1px solid #eee;padding:0 0.5rem;">'
+          '<div style="flex:0 0 auto;min-width:90px;text-align:center;border-right:1px solid #eee;padding:0 0.8rem;">'
           f'<div style="font-size:0.6rem;font-weight:700;color:#666;text-transform:uppercase;margin-bottom:0.2rem;font-family:\'Roboto\',sans-serif;">{bt} {ord_str}</div>'
           f'<div style="font-family:\'Roboto\',sans-serif;font-size:1.2rem;font-weight:900;color:#000;">{score}</div>'
           f'<div style="font-size:0.7rem;color:#666;font-weight:700;">{inn.get("overs", "0.0")} OV</div>'
           '</div>'
         )
       components.html(f"""
+        <style>::-webkit-scrollbar{{display:none;}}</style>
         <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@700;900&display=swap" rel="stylesheet">
-        <div style="background:#fff;border:1px solid #ddd;padding:0.7rem;display:flex;align-items:center;justify-content:space-between;height:100%;box-sizing:border-box;">
+        <div style="background:#fff;border:1px solid #ddd;padding:0.7rem;display:flex;align-items:center;overflow-x:auto;height:100%;box-sizing:border-box;-ms-overflow-style:none;scrollbar-width:none;">
           {pills}
         </div>
       """, height=85)
