@@ -56,6 +56,7 @@ def get_result_text(match):
   w = match.get("winner", "—")
   if w.lower() in ["drawn", "—", "tie", "tied"]: return w
   inns = match.get("innings", [])
+  if not inns: return w
   maxWick = max([i['wickets'] for i in inns])
   if len(inns) > 2:
     l = match.get("teamBName") if w == match.get("teamAName") else match.get("teamAName")
