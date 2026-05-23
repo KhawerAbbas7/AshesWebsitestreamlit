@@ -14,7 +14,7 @@ with col2:
   st.markdown("## Ashes")
 
 st.write("Discord Bot For Ages")
-data = requests.get("https://api.codetabs.com/v1/proxy?quest=http://51.75.118.79:20375/matches/getrecent")
+data = requests.get("http://51.75.118.79:20375/matches/getrecent")
 st.write(data)
 name = st.text_input("Enter your name")
 if name:
