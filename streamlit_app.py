@@ -7,8 +7,8 @@ st.set_page_config(
   layout="wide"
 )
 
-st.sidebar.image(logo, use_container_width=True)
-
+#st.sidebar.image(logo, use_container_width=True)
+st.title("Ashes")
 st.write("Discord Bot For Ages")
 name = st.text_input("Enter your name")
 if name:
