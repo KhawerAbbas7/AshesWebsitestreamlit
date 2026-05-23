@@ -53,18 +53,21 @@ def render_header():
   with c2:
     st.title("ESPN Ashes")
     st.caption("Match Center")
-def render_innings(inning, idx):
+def render_innings(inning, title_label):
   batting_team = inning.get("battingTeam", "—")
   bowling_team = inning.get("bowlingTeam", "—")
   total = inning.get("total", 0)
   wickets = inning.get("wickets", 0)
   overs = inning.get("overs", "0.0")
+  score_disp = f"{total}" if wickets == 10 else f"{total}/{wickets}"
+  if inning.get("isDeclared"):
+    score_disp += "d"
   st.markdown(f"""
     <div style="margin:1.5rem 0 0.5rem; background: #f4f4f4; padding: 0.8rem 1rem; border-left: 4px solid #CC0000;">
-      <div style="font-family:'Roboto',sans-serif;font-size:0.75rem;font-weight:700;color:#666;text-transform:uppercase;margin-bottom:0.2rem;">Innings {idx}</div>
+      <div style="font-family:'Roboto',sans-serif;font-size:0.75rem;font-weight:700;color:#666;text-transform:uppercase;margin-bottom:0.2rem;">{title_label}</div>
       <div style="display:flex;align-items:baseline;gap:1rem;flex-wrap:wrap;">
         <span style="font-family:'Roboto',sans-serif;font-size:1.6rem;font-weight:900;color:#000;text-transform:uppercase;">{batting_team}</span>
-        <span style="font-family:'Roboto',sans-serif;font-size:1.6rem;font-weight:900;color:#CC0000;">{total}/{wickets}</span>
+        <span style="font-family:'Roboto',sans-serif;font-size:1.6rem;font-weight:900;color:#CC0000;">{score_disp}</span>
         <span style="font-size:0.9rem;color:#666;font-weight:700;">({overs} OVERS)</span>
         <span style="font-size:0.8rem;color:#333;margin-left:auto;font-weight:700;text-transform:uppercase;">VS {bowling_team}</span>
       </div>
@@ -111,7 +114,7 @@ def render_innings(inning, idx):
 def page_scorecard(match_id):
   render_header()
   st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
-  if st.button("← Matches"):
+  if st.button("← Box Scores"):
     st.query_params.clear()
     st.rerun()
   with st.spinner("Loading box score..."):
@@ -127,10 +130,33 @@ def page_scorecard(match_id):
   guild = match.get("guildName", "—")
   mvp = match.get("mvp")
   innings_summary = match.get("innings", [])
+  ta_scores = []
+  tb_scores = []
+  for inn in innings_summary:
+    w = inn.get("wickets", 0)
+    score = f"{inn.get('runs', 0)}" if w == 10 else f"{inn.get('runs', 0)}/{w}"
+    if inn.get("isDeclared"):
+      score += "d"
+    if inn.get("battingTeam") == team_a:
+      ta_scores.append(score)
+    elif inn.get("battingTeam") == team_b:
+      tb_scores.append(score)
+  ta_str = " & ".join(ta_scores)
+  tb_str = " & ".join(tb_scores)
   st.markdown(f"""
     <div style="margin: 1.5rem 0; text-align: center; border-bottom: 2px solid #eee; padding-bottom: 1.5rem;">
-      <div style="font-size:0.75rem;font-weight:700;color:#666;text-transform:uppercase;margin-bottom:0.5rem;">{guild} | {channel}</div>
-      <h2 style="font-size:2.8rem;font-weight:900;margin:0;color:#000;text-transform:uppercase;">{team_a} <span style="color:#ccc;font-size:1.8rem;font-weight:900;vertical-align:middle;margin:0 0.5rem;">VS</span> {team_b}</h2>
+      <div style="font-size:0.75rem;font-weight:700;color:#666;text-transform:uppercase;margin-bottom:1rem;">{guild} | {channel}</div>
+      <div style="display:flex;justify-content:center;align-items:center;gap:2rem;flex-wrap:wrap;">
+        <div style="text-align:right;flex:1;min-width:200px;">
+          <div style="font-size:2.4rem;font-weight:900;color:#000;text-transform:uppercase;line-height:1;">{team_a}</div>
+          <div style="font-size:1.6rem;font-weight:900;color:#CC0000;margin-top:0.3rem;">{ta_str}</div>
+        </div>
+        <div style="font-size:1.8rem;font-weight:900;color:#ccc;">VS</div>
+        <div style="text-align:left;flex:1;min-width:200px;">
+          <div style="font-size:2.4rem;font-weight:900;color:#000;text-transform:uppercase;line-height:1;">{team_b}</div>
+          <div style="font-size:1.6rem;font-weight:900;color:#CC0000;margin-top:0.3rem;">{tb_str}</div>
+        </div>
+      </div>
     </div>
   """, unsafe_allow_html=True)
   mc1, mc2, mc3 = st.columns([2, 2, 4])
@@ -158,12 +184,20 @@ def page_scorecard(match_id):
   with mc3:
     if innings_summary:
       pills = ""
+      t_count = {}
       for inn in innings_summary:
+        bt = inn.get("battingTeam", "Team")
+        t_count[bt] = t_count.get(bt, 0) + 1
+        ord_str = "1ST" if t_count[bt] == 1 else "2ND"
+        w = inn.get("wickets", 0)
+        score = f"{inn.get('runs', 0)}" if w == 10 else f"{inn.get('runs', 0)}/{w}"
+        if inn.get("isDeclared"):
+          score += "d"
         pills += (
-          '<div style="flex:1;min-width:110px;text-align:center;border-right:1px solid #eee;padding:0 0.5rem;">'
-          '<div style="font-size:0.65rem;font-weight:700;color:#666;text-transform:uppercase;margin-bottom:0.2rem;font-family:\'Roboto\',sans-serif;">' + str(inn["battingTeam"]) + '</div>'
-          '<div style="font-family:\'Roboto\',sans-serif;font-size:1.3rem;font-weight:900;color:#000;">' + str(inn["runs"]) + '/' + str(inn["wickets"]) +
-          '</div><div style="font-size:0.75rem;color:#666;font-weight:700;">' + str(inn["overs"]) + ' OV</div>'
+          '<div style="flex:1;min-width:90px;text-align:center;border-right:1px solid #eee;padding:0 0.5rem;">'
+          f'<div style="font-size:0.6rem;font-weight:700;color:#666;text-transform:uppercase;margin-bottom:0.2rem;font-family:\'Roboto\',sans-serif;">{bt} {ord_str}</div>'
+          f'<div style="font-family:\'Roboto\',sans-serif;font-size:1.2rem;font-weight:900;color:#000;">{score}</div>'
+          f'<div style="font-size:0.7rem;color:#666;font-weight:700;">{inn.get("overs", "0.0")} OV</div>'
           '</div>'
         )
       components.html(f"""
@@ -176,8 +210,12 @@ def page_scorecard(match_id):
   if not innings_data:
     st.markdown("<p style='color:#666;margin-top:2rem;font-size:1rem;text-align:center;font-weight:700;text-transform:uppercase;'>Scorecard data pending.</p>", unsafe_allow_html=True)
     return
+  t_count_sc = {}
   for i, inning in enumerate(innings_data, 1):
-    render_innings(inning, i)
+    bt = inning.get("battingTeam", "Team")
+    t_count_sc[bt] = t_count_sc.get(bt, 0) + 1
+    ord_str = "1ST" if t_count_sc[bt] == 1 else "2ND"
+    render_innings(inning, f"{bt} {ord_str} INNINGS")
 def page_list():
   render_header()
   st.markdown("<div style='height:1rem'></div>", unsafe_allow_html=True)
@@ -189,26 +227,41 @@ def page_list():
   st.markdown("<div style='height:1rem'></div>", unsafe_allow_html=True)
   for match in matches:
     mid = match["id"]
+    team_a = match.get("teamAName", "Team A")
+    team_b = match.get("teamBName", "Team B")
+    ta_scores = []
+    tb_scores = []
+    for inn in match.get("innings", []):
+      w = inn.get("wickets", 0)
+      score = f"{inn.get('runs', 0)}" if w == 10 else f"{inn.get('runs', 0)}/{w}"
+      if inn.get("isDeclared"):
+        score += "d"
+      if inn.get("battingTeam") == team_a:
+        ta_scores.append(score)
+      elif inn.get("battingTeam") == team_b:
+        tb_scores.append(score)
+    ta_str = f" <span style='color:#CC0000;font-size:1.1rem;margin-left:0.4rem;'>{' & '.join(ta_scores)}</span>" if ta_scores else ""
+    tb_str = f" <span style='color:#CC0000;font-size:1.1rem;margin-left:0.4rem;'>{' & '.join(tb_scores)}</span>" if tb_scores else ""
     c1, c2 = st.columns([10, 2])
     with c1:
       st.markdown(f"""
         <div style="background:#fff;border:1px solid #e0e0e0;border-left:4px solid #CC0000;padding:1.2rem;margin-bottom:0.3rem;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
           <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;">
             <div>
-              <div style="font-size:0.7rem;font-weight:700;color:#666;text-transform:uppercase;margin-bottom:0.3rem;">{match['guildName']} | {match['channelName']}</div>
+              <div style="font-size:0.7rem;font-weight:700;color:#666;text-transform:uppercase;margin-bottom:0.3rem;">{match.get('guildName', '')} | {match.get('channelName', '')}</div>
               <div style="font-family:'Roboto',sans-serif;font-size:1.2rem;font-weight:900;color:#000;text-transform:uppercase;">
-                {match['teamAName']} <span style="color:#ccc;font-weight:900;font-size:1rem;margin:0 0.4rem;">VS</span> {match['teamBName']}
+                {team_a}{ta_str} <span style="color:#ccc;font-weight:900;font-size:1rem;margin:0 0.4rem;">VS</span> {team_b}{tb_str}
               </div>
             </div>
             <div style="display:inline-flex;align-items:center;background:#f4f4f4;border:1px solid #ddd;color:#000;font-size:0.75rem;font-family:'Roboto',sans-serif;font-weight:700;padding:0.3rem 0.8rem;border-radius:2px;text-transform:uppercase;">
-              <span style="color:#CC0000;margin-right:6px;font-weight:900;">WINNER:</span> {match['winner']}
+              <span style="color:#CC0000;margin-right:6px;font-weight:900;">WINNER:</span> {match.get('winner', '—')}
             </div>
           </div>
         </div>
       """, unsafe_allow_html=True)
     with c2:
       st.markdown("<div style='height:1.6rem'></div>", unsafe_allow_html=True)
-      if st.button("Scorecard", key=mid, use_container_width=True):
+      if st.button("Box Score", key=mid, use_container_width=True):
         st.query_params["id"] = mid
         st.rerun()
 params = st.query_params
