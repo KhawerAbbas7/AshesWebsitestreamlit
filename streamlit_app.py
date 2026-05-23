@@ -32,6 +32,9 @@ st.markdown("""
     div[data-testid="stHorizontalBlock"] > div:nth-child(2) > div > div > button:hover {
       background: #f4f4f4 !important; border-color: #999 !important; color: #000 !important;
     }
+    [data-testid="stBaseButton-secondary"] { background: #fff !important; border: 1px solid #ccc !important; color: #333 !important; }
+    [data-testid="stBaseButton-secondary"]:hover { background: #f4f4f4 !important; border-color: #999 !important; color: #000 !important; }
+    button[kind="secondary"] { background: #fff !important; border: 1px solid #ccc !important; color: #333 !important; }
   </style>
 """, unsafe_allow_html=True)
 @st.cache_data(ttl=30)
@@ -211,13 +214,12 @@ def page_scorecard(match_id):
       with tab: render_custom_inning(inning)
 def page_list():
   render_header()
-  st.markdown("<div style='height:1rem'></div>", unsafe_allow_html=True)
-  s1, s2 = st.columns([10, 2])
-  with s1:
-    query = st.text_input("Query", placeholder="Search matches...", label_visibility="collapsed")
-  with s2:
-    if st.button("⚙ Filters", use_container_width=True):
-      st.session_state["show_filters"] = not st.session_state.get("show_filters", False)
+  st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
+  query = st.text_input("Query", placeholder="Search matches...", label_visibility="collapsed", key="query_input")
+  show_filters = st.session_state.get("show_filters", False)
+  if st.button("⚙ Filters" if not show_filters else "✕ Hide Filters", key="filter_toggle", type="secondary"):
+    st.session_state["show_filters"] = not show_filters
+    st.rerun()
   guild_id = ""
   channel_id = ""
   player_id = ""
@@ -230,7 +232,7 @@ def page_list():
   if not matches:
     st.markdown("<p style='color:#000;font-size:1.2rem;font-weight:900;text-align:center;margin-top:4rem;text-transform:uppercase;'>No Results Found</p>", unsafe_allow_html=True)
     return
-  st.markdown("<div style='height:1rem'></div>", unsafe_allow_html=True)
+  cards_html = ""
   for match in matches:
     mid = match["id"]
     team_a = match.get("teamAName", "Team A")
@@ -244,40 +246,35 @@ def page_list():
       if inn.get("isDeclared"): score += "d"
       if inn.get("battingTeam") == team_a: ta_scores.append(score)
       elif inn.get("battingTeam") == team_b: tb_scores.append(score)
-    ta_str = f"<span style='color:#CC0000;font-size:1.1rem;margin-left:0.4rem;'>{' & '.join(ta_scores)}</span>" if ta_scores else ""
-    tb_str = f"<span style='color:#CC0000;font-size:1.1rem;margin-left:0.4rem;'>{' & '.join(tb_scores)}</span>" if tb_scores else ""
+    ta_str = f"<span style='color:#CC0000;font-size:1rem;margin-left:0.3rem;'>{' & '.join(ta_scores)}</span>" if ta_scores else ""
+    tb_str = f"<span style='color:#CC0000;font-size:1rem;margin-left:0.3rem;'>{' & '.join(tb_scores)}</span>" if tb_scores else ""
     res_text = get_result_text(match)
     guild = match.get("guildName", "")
     channel = match.get("channelName", "")
-    time_span = f'<span class="ts" data-ts="{ts}" style="color:#CC0000;font-weight:900;margin-right:8px;"></span>' if ts else ""
-    c1, c2 = st.columns([10, 2])
-    with c1:
-      components.html(f"""
-        <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700;900&display=swap" rel="stylesheet">
-        <div style="background:#fff;border:1px solid #e0e0e0;border-left:4px solid #CC0000;padding:1.2rem;box-shadow:0 1px 3px rgba(0,0,0,0.05);font-family:'Roboto',sans-serif;">
-          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;">
-            <div>
-              <div style="font-size:0.7rem;font-weight:700;color:#666;text-transform:uppercase;margin-bottom:0.3rem;">{time_span}{guild} | {channel}</div>
-              <div style="font-size:1.2rem;font-weight:900;color:#000;text-transform:uppercase;">
-                {team_a} {ta_str} <span style="color:#ccc;font-weight:900;font-size:1rem;margin:0 0.4rem;">VS</span> {team_b} {tb_str}
-              </div>
-            </div>
-            <div style="display:inline-flex;align-items:center;background:#f4f4f4;border:1px solid #ddd;color:#000;font-size:0.75rem;font-weight:700;padding:0.3rem 0.8rem;border-radius:2px;text-transform:uppercase;">
-              <span style="color:#CC0000;margin-right:6px;font-weight:900;">RESULT:</span> {res_text}
-            </div>
-          </div>
+    time_span = f'<span class="ts" data-ts="{ts}"></span> ' if ts else ""
+    cards_html += f"""
+      <div style="background:#fff;border:1px solid #e0e0e0;border-left:4px solid #CC0000;padding:1rem 1.2rem;margin-bottom:0.6rem;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+        <div style="font-size:0.68rem;font-weight:700;color:#666;text-transform:uppercase;margin-bottom:0.25rem;">{time_span}{guild} | {channel}</div>
+        <div style="font-size:1.15rem;font-weight:900;color:#000;text-transform:uppercase;margin-bottom:0.4rem;">
+          {team_a} {ta_str} <span style="color:#ccc;font-weight:900;font-size:0.9rem;margin:0 0.3rem;">VS</span> {team_b} {tb_str}
         </div>
-        <script>
-          document.querySelectorAll('.ts').forEach(function(el) {{
-            el.textContent = new Date(parseInt(el.getAttribute('data-ts')) * 1000).toLocaleString([], {{dateStyle: 'medium', timeStyle: 'short'}});
-          }});
-        </script>
-      """, height=80)
-    with c2:
-      st.markdown("<div style='height:1.6rem'></div>", unsafe_allow_html=True)
-      if st.button("Scorecard", key=mid, use_container_width=True):
-        st.query_params["id"] = mid
-        st.rerun()
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem;flex-wrap:wrap;">
+          <div style="display:inline-flex;align-items:center;background:#f4f4f4;border:1px solid #ddd;color:#000;font-size:0.72rem;font-weight:700;padding:0.25rem 0.7rem;border-radius:2px;text-transform:uppercase;">
+            <span style="color:#CC0000;margin-right:5px;font-weight:900;">RESULT:</span>{res_text}
+          </div>
+          <button onclick="window.top.location.href=window.top.location.pathname+'?id={mid}'" style="background:#CC0000;border:none;color:#fff;font-family:'Roboto',sans-serif;font-size:0.75rem;font-weight:700;padding:0.3rem 1.1rem;border-radius:2px;text-transform:uppercase;cursor:pointer;letter-spacing:0.5px;">SCORECARD</button>
+        </div>
+      </div>
+    """
+  components.html(f"""
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700;900&display=swap" rel="stylesheet">
+    <div style="font-family:'Roboto',sans-serif;padding-top:0.5rem;">{cards_html}</div>
+    <script>
+      document.querySelectorAll('.ts').forEach(function(el) {{
+        el.textContent = new Date(parseInt(el.getAttribute('data-ts')) * 1000).toLocaleString([], {{dateStyle:'medium', timeStyle:'short'}});
+      }});
+    </script>
+  """, height=len(matches) * 115 + 20, scrolling=False)
 params = st.query_params
 match_id = params.get("id", None)
 if match_id:
