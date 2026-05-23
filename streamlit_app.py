@@ -46,6 +46,21 @@ def fetch_match(match_id):
     return r.json()
   except Exception:
     return {}
+def get_result_text(match):
+  w = match.get("winner", "—")
+  if w.lower() in ["drawn", "—", "tie", "tied"]:
+    return w
+  inns = match.get("innings", [])
+  if len(inns) > 2:
+    l = match.get("teamBName") if w == match.get("teamAName") else match.get("teamAName")
+    wr = sum(i.get("runs", 0) for i in inns if i.get("battingTeam") == w)
+    lr = sum(i.get("runs", 0) for i in inns if i.get("battingTeam") == l)
+    if len(inns) == 3 and sum(1 for i in inns if i.get("battingTeam") == w) == 1:
+      return f"{w} won by an innings and {wr - lr} runs"
+    if inns[-1].get("battingTeam") == w:
+      return f"{w} won by {10 - inns[-1].get('wickets', 0)} wickets"
+    return f"{w} won by {wr - lr} runs"
+  return w
 def render_header():
   c1, c2 = st.columns([1, 11])
   with c1:
@@ -125,7 +140,7 @@ def page_scorecard(match_id):
     return
   team_a = match.get("teamAName", "Team A")
   team_b = match.get("teamBName", "Team B")
-  winner = match.get("winner", "—")
+  res_text = get_result_text(match)
   channel = match.get("channelName", "—")
   guild = match.get("guildName", "—")
   mvp = match.get("mvp")
@@ -164,8 +179,8 @@ def page_scorecard(match_id):
     components.html(f"""
       <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@700;900&display=swap" rel="stylesheet">
       <div style="background:#fff;border:1px solid #ddd;border-top:3px solid #CC0000;padding:1rem;">
-        <div style="font-size:0.65rem;font-weight:700;color:#666;text-transform:uppercase;margin-bottom:0.4rem;font-family:'Roboto',sans-serif;">Winner</div>
-        <div style="font-family:'Roboto',sans-serif;font-size:1.1rem;font-weight:900;color:#000;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">🏆 {winner}</div>
+        <div style="font-size:0.65rem;font-weight:700;color:#666;text-transform:uppercase;margin-bottom:0.4rem;font-family:'Roboto',sans-serif;">Result</div>
+        <div style="font-family:'Roboto',sans-serif;font-size:0.95rem;font-weight:900;color:#000;text-transform:uppercase;">🏆 {res_text}</div>
       </div>
     """, height=85)
   with mc2:
@@ -243,6 +258,7 @@ def page_list():
         tb_scores.append(score)
     ta_str = f" <span style='color:#CC0000;font-size:1.1rem;margin-left:0.4rem;'>{' & '.join(ta_scores)}</span>" if ta_scores else ""
     tb_str = f" <span style='color:#CC0000;font-size:1.1rem;margin-left:0.4rem;'>{' & '.join(tb_scores)}</span>" if tb_scores else ""
+    res_text = get_result_text(match)
     c1, c2 = st.columns([10, 2])
     with c1:
       st.markdown(f"""
@@ -255,7 +271,7 @@ def page_list():
               </div>
             </div>
             <div style="display:inline-flex;align-items:center;background:#f4f4f4;border:1px solid #ddd;color:#000;font-size:0.75rem;font-family:'Roboto',sans-serif;font-weight:700;padding:0.3rem 0.8rem;border-radius:2px;text-transform:uppercase;">
-              <span style="color:#CC0000;margin-right:6px;font-weight:900;">WINNER:</span> {match.get('winner', '—')}
+              <span style="color:#CC0000;margin-right:6px;font-weight:900;">RESULT:</span> {res_text}
             </div>
           </div>
         </div>
