@@ -13,7 +13,7 @@ st.set_page_config(
 @st.cache_data(ttl=30)
 def fetch_matches():
   try:
-    r = requests.get("http://51.75.118.79:20375/matches/getrecent", timeout=5)
+    r = requests.get("http://51.75.118.79:20375/matches/getrecent?recent=10", timeout=5)
     return r.json()
   except:
     return {"Matches": []}
