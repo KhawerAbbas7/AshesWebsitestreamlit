@@ -62,9 +62,9 @@ def get_result_text(match):
     wr = sum(i.get("runs", 0) for i in inns if i.get("battingTeam") == w)
     lr = sum(i.get("runs", 0) for i in inns if i.get("battingTeam") == l)
     if len(inns) == 3 and sum(1 for i in inns if i.get("battingTeam") == w) == 1:
-      return f"{w} won by an innings and {wr - lr} runs"
+      return f"{w} won by an innings and {wr - lr} run(s)"
     if inns[-1].get("battingTeam") == w:
-      return f"{w} won by {maxWick - inns[-1].get('wickets', 0)} wickets"
+      return f"{w} won by {maxWick - inns[-1].get('wickets', 0)} wicket(s)"
     return f"{w} won by {wr - lr} runs"
   return w
 def render_header():
