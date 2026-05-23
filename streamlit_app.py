@@ -197,7 +197,7 @@ def page_scorecard(match_id):
     bt = inning.get("battingTeam", "Team")
     t_count_sc[bt] = t_count_sc.get(bt, 0) + 1
     w = inning.get("wickets", 0)
-    score = f"{inning.get('runs', 0)}" if w == 10 else f"{inning.get('runs', 0)}/{w}"
+    score =f"{inning.get('total', 0)}/{w}"
     if inning.get("isDeclared"):
       score += "d"
     tab_titles.append(f"{bt} {score}")
