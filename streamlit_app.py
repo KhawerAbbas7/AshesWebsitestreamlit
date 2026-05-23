@@ -1,29 +1,59 @@
 import streamlit as st
-import requests,json
+import requests
 from datetime import datetime
-logo= "40ef4cf2ee6a72db2a5af55c231192bd.png"
-st.set_page_config(layout="wide")
+
+logo = "40ef4cf2ee6a72db2a5af55c231192bd.png"
+
 st.set_page_config(
   page_title="Ashes",
   page_icon=logo,
   layout="wide"
 )
-col1, col2 = st.columns([1, 8])
+
+@st.cache_data(ttl=30)
+def fetch_matches():
+  try:
+    r = requests.get("http://51.75.118.79:20375/matches/getrecent", timeout=5)
+    return r.json()
+  except:
+    return {"Matches": []}
+
+col1, col2 = st.columns([1, 10])
+
 with col1:
   st.image(logo, width=60)
-with col2:
-  st.markdown("## Ashes")
 
-st.write("Discord Bot For Ages")
-data = requests.get("http://51.75.118.79:20375/matches/getrecent").json()
-for match in data["Matches"]:
-  col1, col2 = st.columns([3, 1])
-  ts = match["timestamp"]
-  dt = datetime.fromtimestamp(ts / 1000 if ts > 10**12 else ts)
-  with col1:
-    st.subheader(f"{match['teamAName']} vs {match['teamBName']}")
-    st.write(match["channelName"])
-    st.caption(match["guildName"])
-  with col2:
-    st.metric("Winner", match["winner"])
-    st.caption(dt.strftime("%Y-%m-%d %H:%M")))
+with col2:
+  st.title("Ashes")
+  st.caption("Discord Bot Match Dashboard")
+
+st.divider()
+
+data = fetch_matches()
+
+matches = data.get("Matches", [])
+
+if not matches:
+  st.info("No recent matches found.")
+else:
+  for match in matches:
+
+    ts = match.get("timestamp", 0)
+    dt = datetime.fromtimestamp(ts / 1000 if ts > 10**12 else ts)
+
+    with st.container():
+      col1, col2, col3 = st.columns([4, 1, 2])
+
+      with col1:
+        st.subheader(f"{match.get('teamAName')} vs {match.get('teamBName')}")
+        st.write(f"📢 {match.get('channelName')}")
+        st.caption(match.get("guildName"))
+
+      with col2:
+        st.metric("Winner", match.get("winner", "N/A"))
+
+      with col3:
+        st.caption("Match Time")
+        st.write(dt.strftime("%d %b %Y, %I:%M %p"))
+
+      st.divider()
