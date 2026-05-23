@@ -1,7 +1,6 @@
 import streamlit as st
 import requests
 import streamlit.components.v1 as components
-from datetime import datetime
 logo = "40ef4cf2ee6a72db2a5af55c231192bd.png"
 BASE = "http://51.75.118.79:20375"
 st.set_page_config(page_title="Ashes", page_icon=logo, layout="wide")
@@ -28,11 +27,13 @@ st.markdown("""
   </style>
 """, unsafe_allow_html=True)
 @st.cache_data(ttl=30)
-def fetch_matches(query=None):
+def fetch_matches(query=None, channel_id=None, guild_id=None, player_id=None):
   try:
     params = {"recent": 20}
-    if query:
-      params["query"] = query
+    if query: params["query"] = query
+    if channel_id: params["channelId"] = channel_id
+    if guild_id: params["guildId"] = guild_id
+    if player_id: params["playerId"] = player_id
     r = requests.get(f"{BASE}/matches/getrecent", params=params, timeout=5)
     return r.json().get("Matches", [])
   except Exception:
@@ -53,8 +54,7 @@ def fetch_match(match_id):
     return {}
 def get_result_text(match):
   w = match.get("winner", "—")
-  if w.lower() in ["drawn", "—", "tie", "tied"]:
-    return w
+  if w.lower() in ["drawn", "—", "tie", "tied"]: return w
   inns = match.get("innings", [])
   if len(inns) > 2:
     l = match.get("teamBName") if w == match.get("teamAName") else match.get("teamAName")
@@ -68,8 +68,7 @@ def get_result_text(match):
   return w
 def render_header():
   c1, c2 = st.columns([1, 11])
-  with c1:
-    st.image(logo, width=48)
+  with c1: st.image(logo, width=48)
   with c2:
     st.title("Ashes")
     st.caption("Match Center")
@@ -114,12 +113,9 @@ def page_scorecard(match_id):
   for inn in innings_summary:
     w = inn.get("wickets", 0)
     score = f"{inn.get('runs', 0)}" if w == 10 else f"{inn.get('runs', 0)}/{w}"
-    if inn.get("isDeclared"):
-      score += "d"
-    if inn.get("battingTeam") == team_a:
-      ta_scores.append(score)
-    elif inn.get("battingTeam") == team_b:
-      tb_scores.append(score)
+    if inn.get("isDeclared"): score += "d"
+    if inn.get("battingTeam") == team_a: ta_scores.append(score)
+    elif inn.get("battingTeam") == team_b: tb_scores.append(score)
   ta_str = " & ".join(ta_scores)
   tb_str = " & ".join(tb_scores)
   st.markdown(f"""
@@ -170,8 +166,7 @@ def page_scorecard(match_id):
         ord_str = "1ST" if t_count[bt] == 1 else "2ND"
         w = inn.get("wickets", 0)
         score = f"{inn.get('runs', 0)}" if w == 10 else f"{inn.get('runs', 0)}/{w}"
-        if inn.get("isDeclared"):
-          score += "d"
+        if inn.get("isDeclared"): score += "d"
         pills += (
           '<div style="flex:0 0 auto;min-width:90px;text-align:center;border-right:1px solid #eee;padding:0 0.8rem;">'
           f'<div style="font-size:0.6rem;font-weight:700;color:#666;text-transform:uppercase;margin-bottom:0.2rem;font-family:\'Roboto\',sans-serif;">{bt} {ord_str}</div>'
@@ -197,20 +192,22 @@ def page_scorecard(match_id):
     bt = inning.get("battingTeam", "Team")
     t_count_sc[bt] = t_count_sc.get(bt, 0) + 1
     w = inning.get("wickets", 0)
-    score =f"{inning.get('total', 0)}/{w}"
-    if inning.get("isDeclared"):
-      score += "d"
+    score = f"{inning.get('total', 0)}/{w}"
+    if inning.get("isDeclared"): score += "d"
     tab_titles.append(f"{bt} {score}")
   if tab_titles:
     tabs = st.tabs(tab_titles)
     for tab, inning in zip(tabs, innings_data):
-      with tab:
-        render_custom_inning(inning)
+      with tab: render_custom_inning(inning)
 def page_list():
   render_header()
   st.markdown("<div style='height:1rem'></div>", unsafe_allow_html=True)
-  query = st.text_input("", placeholder="Search teams, match ids...", label_visibility="collapsed")
-  matches = fetch_matches(query if query else None)
+  f1, f2, f3, f4 = st.columns(4)
+  with f1: query = st.text_input("Query", placeholder="Search matches...", label_visibility="collapsed")
+  with f2: guild_id = st.text_input("Server", placeholder="Server ID (Optional)", label_visibility="collapsed")
+  with f3: channel_id = st.text_input("Channel", placeholder="Channel ID (Optional)", label_visibility="collapsed")
+  with f4: player_id = st.text_input("Player", placeholder="Player ID (Optional)", label_visibility="collapsed")
+  matches = fetch_matches(query, channel_id, guild_id, player_id)
   if not matches:
     st.markdown("<p style='color:#000;font-size:1.2rem;font-weight:900;text-align:center;margin-top:4rem;text-transform:uppercase;'>No Results Found</p>", unsafe_allow_html=True)
     return
@@ -219,17 +216,16 @@ def page_list():
     mid = match["id"]
     team_a = match.get("teamAName", "Team A")
     team_b = match.get("teamBName", "Team B")
+    ts = match.get("timestamp", 0)
+    time_html = f"""<span style="color:#CC0000;font-weight:900;margin-right:8px;"><img src="x" onerror="this.parentNode.innerHTML = new Date({ts} * 1000).toLocaleString([], {{dateStyle: 'medium', timeStyle: 'short'}})" style="display:none;"></span>""" if ts else ""
     ta_scores = []
     tb_scores = []
     for inn in match.get("innings", []):
       w = inn.get("wickets", 0)
       score = f"{inn.get('runs', 0)}" if w == 10 else f"{inn.get('runs', 0)}/{w}"
-      if inn.get("isDeclared"):
-        score += "d"
-      if inn.get("battingTeam") == team_a:
-        ta_scores.append(score)
-      elif inn.get("battingTeam") == team_b:
-        tb_scores.append(score)
+      if inn.get("isDeclared"): score += "d"
+      if inn.get("battingTeam") == team_a: ta_scores.append(score)
+      elif inn.get("battingTeam") == team_b: tb_scores.append(score)
     ta_str = f" <span style='color:#CC0000;font-size:1.1rem;margin-left:0.4rem;'>{' & '.join(ta_scores)}</span>" if ta_scores else ""
     tb_str = f" <span style='color:#CC0000;font-size:1.1rem;margin-left:0.4rem;'>{' & '.join(tb_scores)}</span>" if tb_scores else ""
     res_text = get_result_text(match)
@@ -239,7 +235,7 @@ def page_list():
         <div style="background:#fff;border:1px solid #e0e0e0;border-left:4px solid #CC0000;padding:1.2rem;margin-bottom:0.3rem;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
           <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;">
             <div>
-              <div style="font-size:0.7rem;font-weight:700;color:#666;text-transform:uppercase;margin-bottom:0.3rem;">{match.get('guildName', '')} | {match.get('channelName', '')}</div>
+              <div style="font-size:0.7rem;font-weight:700;color:#666;text-transform:uppercase;margin-bottom:0.3rem;">{time_html}{match.get('guildName', '')} | {match.get('channelName', '')}</div>
               <div style="font-family:'Roboto',sans-serif;font-size:1.2rem;font-weight:900;color:#000;text-transform:uppercase;">
                 {team_a}{ta_str} <span style="color:#ccc;font-weight:900;font-size:1rem;margin:0 0.4rem;">VS</span> {team_b}{tb_str}
               </div>
