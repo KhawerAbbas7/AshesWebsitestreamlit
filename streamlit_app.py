@@ -1,11 +1,21 @@
 import streamlit as st
 import requests
 from datetime import datetime
-
+import streamlit.components.v1 as components
 logo="40ef4cf2ee6a72db2a5af55c231192bd.png"
-
 st.set_page_config(page_title="Ashes",page_icon=logo,layout="wide")
+def show_local_time(ts):
+  components.html(f"""
+  <div style="font-size:14px;color:#aaa;">
+    <span id="time"></span>
+  </div>
 
+  <script>
+    const ts = {ts};
+    const d = new Date(ts < 1e12 ? ts*1000 : ts);
+    document.getElementById("time").innerText = d.toLocaleString();
+  </script>
+  """, height=40)
 if "page" not in st.session_state:
   st.session_state.page="list"
 if "selected_match" not in st.session_state:
@@ -42,7 +52,7 @@ if st.session_state.page=="list":
   for match in filtered:
     col1,col2,col3=st.columns([4,1,1])
     ts=match.get("timestamp",0)
-    dt=datetime.fromtimestamp(ts/1000 if ts>10**12 else ts)
+    
     with col1:
       st.subheader(f"{match['teamAName']} vs {match['teamBName']}")
       st.write(match["channelName"])
@@ -69,4 +79,5 @@ if st.session_state.page=="details":
   st.write("Winner:",match["winner"])
   ts=match["timestamp"]
   dt=datetime.fromtimestamp(ts/1000 if ts>10**12 else ts)
-  st.write("Time:",dt.strftime("%d %b %Y, %I:%M %p"))
+  st.write("Time:")
+  show_local_time(match["timestamp"])
