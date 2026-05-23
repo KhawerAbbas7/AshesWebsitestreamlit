@@ -235,7 +235,7 @@ def page_list():
     team_a = match.get("teamAName", "Team A")
     team_b = match.get("teamBName", "Team B")
     ts = match.get("timestamp", 0)
-    time_html = f"""<span style="color:#CC0000;font-weight:900;margin-right:8px;"><img src="x" onerror="this.parentNode.innerHTML = new Date({ts}).toLocaleString([], {{dateStyle: 'medium', timeStyle: 'short'}})" style=""></span>""" if ts else ""
+    time_html = f"""<span style="color:#CC0000;font-weight:900;margin-right:8px;"><img src="x" onerror="this.parentNode.innerHTML = new Date({ts}).toLocaleString([], {{dateStyle: 'medium', timeStyle: 'short'}})" style="display:none;"></span>""" if ts else ""
     ta_scores = []
     tb_scores = []
     for inn in match.get("innings", []):
