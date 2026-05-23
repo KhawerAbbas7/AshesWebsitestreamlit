@@ -1,7 +1,7 @@
 import streamlit as st
 import requests
 import streamlit.components.v1 as components
-import uuid
+
 logo = "40ef4cf2ee6a72db2a5af55c231192bd.png"
 BASE = "http://51.75.118.79:20375"
 st.set_page_config(page_title="Ashes", page_icon=logo, layout="wide")
@@ -231,13 +231,12 @@ def page_list():
     st.markdown("<p style='color:#000;font-size:1.2rem;font-weight:900;text-align:center;margin-top:4rem;text-transform:uppercase;'>No Results Found</p>", unsafe_allow_html=True)
     return
   st.markdown("<div style='height:1rem'></div>", unsafe_allow_html=True)
+  cards_html = ""
   for match in matches:
     mid = match["id"]
     team_a = match.get("teamAName", "Team A")
     team_b = match.get("teamBName", "Team B")
     ts = match.get("timestamp", 0)
-    tid = f"ts_{mid}"
-    time_html = f"""<span id="{tid}" style="color:#CC0000;font-weight:900;margin-right:8px;"></span><script>document.getElementById("{tid}").textContent=new Date({ts}).toLocaleString([],{{dateStyle:"medium",timeStyle:"short"}});</script>""" if ts else ""
     ta_scores = []
     tb_scores = []
     for inn in match.get("innings", []):
@@ -246,18 +245,20 @@ def page_list():
       if inn.get("isDeclared"): score += "d"
       if inn.get("battingTeam") == team_a: ta_scores.append(score)
       elif inn.get("battingTeam") == team_b: tb_scores.append(score)
-    ta_str = f" <span style='color:#CC0000;font-size:1.1rem;margin-left:0.4rem;'>{' & '.join(ta_scores)}</span>" if ta_scores else ""
-    tb_str = f" <span style='color:#CC0000;font-size:1.1rem;margin-left:0.4rem;'>{' & '.join(tb_scores)}</span>" if tb_scores else ""
+    ta_str = f"<span style='color:#CC0000;font-size:1.1rem;margin-left:0.4rem;'>{' &amp; '.join(ta_scores)}</span>" if ta_scores else ""
+    tb_str = f"<span style='color:#CC0000;font-size:1.1rem;margin-left:0.4rem;'>{' &amp; '.join(tb_scores)}</span>" if tb_scores else ""
     res_text = get_result_text(match)
-    c1, c2 = st.columns([10, 2])
-    with c1:
-      st.markdown(f"""
-        <div style="background:#fff;border:1px solid #e0e0e0;border-left:4px solid #CC0000;padding:1.2rem;margin-bottom:0.3rem;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+    guild = match.get("guildName", "")
+    channel = match.get("channelName", "")
+    time_span = f'<span class="ts" data-ts="{ts}" style="color:#CC0000;font-weight:900;margin-right:8px;"></span>' if ts else ""
+    cards_html += f"""
+      <div style="display:flex;align-items:stretch;gap:0.5rem;margin-bottom:0.5rem;">
+        <div style="flex:1;background:#fff;border:1px solid #e0e0e0;border-left:4px solid #CC0000;padding:1.2rem;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
           <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;">
             <div>
-              <div style="font-size:0.7rem;font-weight:700;color:#666;text-transform:uppercase;margin-bottom:0.3rem;">{time_html}{match.get('guildName', '')} | {match.get('channelName', '')}</div>
+              <div style="font-size:0.7rem;font-weight:700;color:#666;text-transform:uppercase;margin-bottom:0.3rem;">{time_span}{guild} | {channel}</div>
               <div style="font-family:'Roboto',sans-serif;font-size:1.2rem;font-weight:900;color:#000;text-transform:uppercase;">
-                {team_a}{ta_str} <span style="color:#ccc;font-weight:900;font-size:1rem;margin:0 0.4rem;">VS</span> {team_b}{tb_str}
+                {team_a} {ta_str} <span style="color:#ccc;font-weight:900;font-size:1rem;margin:0 0.4rem;">VS</span> {team_b} {tb_str}
               </div>
             </div>
             <div style="display:inline-flex;align-items:center;background:#f4f4f4;border:1px solid #ddd;color:#000;font-size:0.75rem;font-family:'Roboto',sans-serif;font-weight:700;padding:0.3rem 0.8rem;border-radius:2px;text-transform:uppercase;">
@@ -265,12 +266,19 @@ def page_list():
             </div>
           </div>
         </div>
-      """, unsafe_allow_html=True)
-    with c2:
-      st.markdown("<div style='height:1.6rem'></div>", unsafe_allow_html=True)
-      if st.button("Scorecard", key=mid, use_container_width=True):
-        st.query_params["id"] = mid
-        st.rerun()
+        <button onclick="window.parent.location.href=window.parent.location.pathname+'?id={mid}'" style="background:#CC0000;border:none;color:#fff;font-family:'Roboto',sans-serif;font-size:0.8rem;font-weight:700;padding:0 1.2rem;border-radius:2px;text-transform:uppercase;cursor:pointer;white-space:nowrap;">Scorecard</button>
+      </div>
+    """
+  components.html(f"""
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700;900&display=swap" rel="stylesheet">
+    <div style="font-family:'Roboto',sans-serif;">{cards_html}</div>
+    <script>
+      document.querySelectorAll('.ts').forEach(function(el) {{
+        var ts = parseInt(el.getAttribute('data-ts'));
+        el.textContent = new Date(ts * 1000).toLocaleString([], {{dateStyle: 'medium', timeStyle: 'short'}});
+      }});
+    </script>
+  """, height=len(matches) * 90 + 20, scrolling=False)
 params = st.query_params
 match_id = params.get("id", None)
 if match_id:
