@@ -16,7 +16,6 @@ st.markdown("""
     .stButton > button:hover { background: #990000; color: #fff; }
     .stTextInput > div > input { background: #fff; border: 1px solid #ccc; color: #000; font-family: 'Roboto', sans-serif; font-size: 0.9rem; border-radius: 2px; padding: 0.5rem 0.8rem; }
     .stTextInput > div > input:focus { border-color: #CC0000; box-shadow: 0 0 0 1px #CC0000; }
-    div[data-testid="stTextInput"]:has(input[placeholder="__nav__"]) { visibility: hidden; height: 0; margin: 0; padding: 0; }
     table.custom-table { width: 100%; border-collapse: collapse; background: #fff; margin-bottom: 1rem; }
     table.custom-table th { border-bottom: 2px solid #e0e0e0; padding: 0.6rem; color: #666; font-size: 0.75rem; text-transform: uppercase; text-align: left; font-weight: 700; }
     table.custom-table td { border-bottom: 1px solid #eee; padding: 0.6rem; font-size: 0.85rem; color: #000; }
@@ -28,6 +27,8 @@ st.markdown("""
     .stTabs [data-baseweb="tab-border"] { background-color: #ddd !important; height: 1px; }
     button[data-testid="stBaseButton-secondary"] { background: #fff !important; border: 1px solid #ccc !important; color: #333 !important; }
     button[data-testid="stBaseButton-secondary"]:hover { background: #f4f4f4 !important; border-color: #999 !important; }
+    div[data-testid="stHorizontalBlock"] { flex-wrap: nowrap !important; gap: 0.5rem; }
+    div[data-testid="stHorizontalBlock"] > div { min-width: 0 !important; }
   </style>
 """, unsafe_allow_html=True)
 @st.cache_data(ttl=30)
@@ -221,15 +222,10 @@ def page_list():
     with f1: guild_id = st.text_input("Server", placeholder="Server ID", label_visibility="collapsed")
     with f2: channel_id = st.text_input("Channel", placeholder="Channel ID", label_visibility="collapsed")
     with f3: player_id = st.text_input("Player", placeholder="Player ID", label_visibility="collapsed")
-  nav_val = st.text_input("nav", placeholder="__nav__", label_visibility="collapsed", key="nav_input")
-  if nav_val:
-    st.query_params["id"] = nav_val
-    st.rerun()
   matches = fetch_matches(query, channel_id, guild_id, player_id)
   if not matches:
     st.markdown("<p style='color:#000;font-size:1.2rem;font-weight:900;text-align:center;margin-top:4rem;text-transform:uppercase;'>No Results Found</p>", unsafe_allow_html=True)
     return
-  cards_html = ""
   for match in matches:
     mid = match["id"]
     team_a = match.get("teamAName", "Team A")
@@ -249,36 +245,30 @@ def page_list():
     guild = match.get("guildName", "")
     channel = match.get("channelName", "")
     time_span = f'<span class="ts" data-ts="{ts}"></span> ' if ts else ""
-    cards_html += f"""
-      <div style="background:#fff;border:1px solid #e0e0e0;border-left:4px solid #CC0000;padding:1rem 1.2rem;margin-bottom:0.6rem;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
-        <div style="font-size:0.68rem;font-weight:700;color:#666;text-transform:uppercase;margin-bottom:0.25rem;">{time_span}{guild} | {channel}</div>
-        <div style="font-size:1.15rem;font-weight:900;color:#000;text-transform:uppercase;margin-bottom:0.4rem;">
-          {team_a} {ta_str} <span style="color:#ccc;font-weight:900;font-size:0.9rem;margin:0 0.3rem;">VS</span> {team_b} {tb_str}
-        </div>
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem;flex-wrap:wrap;">
+    c1, c2 = st.columns([10, 2])
+    with c1:
+      components.html(f"""
+        <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700;900&display=swap" rel="stylesheet">
+        <div style="background:#fff;border:1px solid #e0e0e0;border-left:4px solid #CC0000;padding:1rem 1.2rem;box-shadow:0 1px 3px rgba(0,0,0,0.05);font-family:'Roboto',sans-serif;">
+          <div style="font-size:0.68rem;font-weight:700;color:#666;text-transform:uppercase;margin-bottom:0.25rem;">{time_span}{guild} | {channel}</div>
+          <div style="font-size:1.15rem;font-weight:900;color:#000;text-transform:uppercase;margin-bottom:0.4rem;">
+            {team_a} {ta_str} <span style="color:#ccc;font-weight:900;font-size:0.9rem;margin:0 0.3rem;">VS</span> {team_b} {tb_str}
+          </div>
           <div style="display:inline-flex;align-items:center;background:#f4f4f4;border:1px solid #ddd;color:#000;font-size:0.72rem;font-weight:700;padding:0.25rem 0.7rem;border-radius:2px;text-transform:uppercase;">
             <span style="color:#CC0000;margin-right:5px;font-weight:900;">RESULT:</span>{res_text}
           </div>
-          <button onclick="navigate('{mid}')" style="background:#CC0000;border:none;color:#fff;font-family:'Roboto',sans-serif;font-size:0.75rem;font-weight:700;padding:0.3rem 1.1rem;border-radius:2px;text-transform:uppercase;cursor:pointer;letter-spacing:0.5px;">SCORECARD</button>
         </div>
-      </div>
-    """
-  components.html(f"""
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700;900&display=swap" rel="stylesheet">
-    <div style="font-family:'Roboto',sans-serif;padding-top:0.5rem;">{cards_html}</div>
-    <script>
-      document.querySelectorAll('.ts').forEach(function(el) {{
-        el.textContent = new Date(parseInt(el.getAttribute('data-ts')) * 1000).toLocaleString([], {{dateStyle:'medium', timeStyle:'short'}});
-      }});
-      function navigate(id) {{
-        var inp = window.parent.document.querySelector('input[placeholder="__nav__"]');
-        if (!inp) return;
-        var setter = Object.getOwnPropertyDescriptor(window.parent.HTMLInputElement.prototype, 'value').set;
-        setter.call(inp, id);
-        inp.dispatchEvent(new Event('input', {{bubbles: true}}));
-      }}
-    </script>
-  """, height=len(matches) * 115 + 20, scrolling=False)
+        <script>
+          document.querySelectorAll('.ts').forEach(function(el) {{
+            el.textContent = new Date(parseInt(el.getAttribute('data-ts')) * 1000).toLocaleString([], {{dateStyle:'medium', timeStyle:'short'}});
+          }});
+        </script>
+      """, height=105)
+    with c2:
+      st.markdown("<div style='height:1.9rem'></div>", unsafe_allow_html=True)
+      if st.button("Scorecard", key=f"sc_{mid}", use_container_width=True):
+        st.query_params["id"] = mid
+        st.rerun()
 params = st.query_params
 match_id = params.get("id", None)
 if match_id:
