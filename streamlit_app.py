@@ -81,7 +81,7 @@ def render_custom_inning(inning):
     html += "<table class='custom-table'><thead><tr><th>Batters</th><th class='num'>R</th><th class='num'>B</th><th class='num'>4s</th><th class='num'>6s</th><th class='num'>SR</th></tr></thead><tbody>"
     for b in batters:
       name = b.get("playerName", "—")
-      status = "Not out" if not b.get("dismissed") else "Out"
+      status = b.get('dismissedBy')
       html += f"<tr><td><div style='font-weight:700;color:#000;'>{name}</div><div style='font-size:0.7rem;color:#666;text-transform:uppercase;'>{status}</div></td><td class='num bold'>{b.get('runs',0)}</td><td class='num'>{b.get('balls',0)}</td><td class='num'>{b.get('fours',0)}</td><td class='num'>{b.get('sixes',0)}</td><td class='num'>{b.get('strikeRate',0.0):.1f}</td></tr>"
     html += "</tbody></table>"
   if bowlers:
