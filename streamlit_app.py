@@ -1,6 +1,7 @@
 import streamlit as st
 import requests
 import streamlit.components.v1 as components
+import uuid
 logo = "40ef4cf2ee6a72db2a5af55c231192bd.png"
 BASE = "http://51.75.118.79:20375"
 st.set_page_config(page_title="Ashes", page_icon=logo, layout="wide")
@@ -235,7 +236,8 @@ def page_list():
     team_a = match.get("teamAName", "Team A")
     team_b = match.get("teamBName", "Team B")
     ts = match.get("timestamp", 0)
-    time_html = f"""<span style="color:#CC0000;font-weight:900;margin-right:8px;"><img src="x" onerror="this.parentNode.innerHTML = new Date({ts}).toLocaleString([], {{dateStyle: 'medium', timeStyle: 'short'}})" style="display:none;"></span>""" if ts else ""
+    tid = f"ts_{mid}"
+    time_html = f"""<span id="{tid}" style="color:#CC0000;font-weight:900;margin-right:8px;"></span><script>document.getElementById("{tid}").textContent=new Date({ts}*1000).toLocaleString([],{{dateStyle:"medium",timeStyle:"short"}});</script>""" if ts else ""
     ta_scores = []
     tb_scores = []
     for inn in match.get("innings", []):
