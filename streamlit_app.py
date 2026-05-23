@@ -209,7 +209,7 @@ def page_scorecard(match_id):
 def page_list():
   render_header()
   st.markdown("<div style='height:1rem'></div>", unsafe_allow_html=True)
-  query = st.text_input("", placeholder="Search teams, players, or events...", label_visibility="collapsed")
+  query = st.text_input("", placeholder="Search teams, match ids...", label_visibility="collapsed")
   matches = fetch_matches(query if query else None)
   if not matches:
     st.markdown("<p style='color:#000;font-size:1.2rem;font-weight:900;text-align:center;margin-top:4rem;text-transform:uppercase;'>No Results Found</p>", unsafe_allow_html=True)
