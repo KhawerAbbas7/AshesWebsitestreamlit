@@ -16,10 +16,15 @@ st.markdown("""
     .stButton > button:hover { background: #990000; color: #fff; }
     .stTextInput > div > input { background: #fff; border: 1px solid #ccc; color: #000; font-family: 'Roboto', sans-serif; font-size: 0.9rem; border-radius: 2px; padding: 0.5rem 0.8rem; }
     .stTextInput > div > input:focus { border-color: #CC0000; box-shadow: 0 0 0 1px #CC0000; }
-    thead tr th { font-family: 'Roboto', sans-serif !important; font-size: 0.75rem !important; font-weight: 700 !important; color: #000 !important; text-transform: uppercase !important; background: #e9ecef !important; border-bottom: 2px solid #dee2e6 !important; }
-    tbody tr td { font-size: 0.85rem !important; color: #333 !important; border-bottom: 1px solid #eee !important; }
-    tbody tr:hover td { background: #f8f9fa !important; }
-    .stCaption { color: #666 !important; font-size: 0.8rem !important; font-weight: 500; text-transform: uppercase; }
+    table.custom-table { width: 100%; border-collapse: collapse; background: #fff; margin-bottom: 1rem; }
+    table.custom-table th { border-bottom: 2px solid #e0e0e0; padding: 0.6rem; color: #666; font-size: 0.75rem; text-transform: uppercase; text-align: left; font-weight: 700; }
+    table.custom-table td { border-bottom: 1px solid #eee; padding: 0.6rem; font-size: 0.85rem; color: #000; }
+    table.custom-table th.num, table.custom-table td.num { text-align: right; }
+    table.custom-table td.bold { font-weight: 900; }
+    .stTabs [data-baseweb="tab-list"] { gap: 8px; margin-bottom: 1rem; }
+    .stTabs [data-baseweb="tab"] { font-family: 'Roboto', sans-serif; font-weight: 700; font-size: 0.9rem; padding: 10px 16px; border-radius: 4px 4px 0 0; background: #f4f4f4; color: #666; border: 1px solid #ddd; border-bottom: none; }
+    .stTabs [aria-selected="true"] { background: #fff; color: #CC0000; border-top: 3px solid #CC0000; border-left: 1px solid #ddd; border-right: 1px solid #ddd; border-bottom: 1px solid #fff; margin-bottom: -1px; }
+    .stTabs [data-baseweb="tab-border"] { background-color: #ddd !important; height: 1px; }
   </style>
 """, unsafe_allow_html=True)
 @st.cache_data(ttl=30)
@@ -68,64 +73,23 @@ def render_header():
   with c2:
     st.title("ESPN Ashes")
     st.caption("Match Center")
-def render_innings(inning, title_label):
-  batting_team = inning.get("battingTeam", "—")
-  bowling_team = inning.get("bowlingTeam", "—")
-  total = inning.get("total", 0)
-  wickets = inning.get("wickets", 0)
-  overs = inning.get("overs", "0.0")
-  score_disp = f"{total}" if wickets == 10 else f"{total}/{wickets}"
-  if inning.get("isDeclared"):
-    score_disp += "d"
-  st.markdown(f"""
-    <div style="margin:1.5rem 0 0.5rem; background: #f4f4f4; padding: 0.8rem 1rem; border-left: 4px solid #CC0000;">
-      <div style="font-family:'Roboto',sans-serif;font-size:0.75rem;font-weight:700;color:#666;text-transform:uppercase;margin-bottom:0.2rem;">{title_label}</div>
-      <div style="display:flex;align-items:baseline;gap:1rem;flex-wrap:wrap;">
-        <span style="font-family:'Roboto',sans-serif;font-size:1.6rem;font-weight:900;color:#000;text-transform:uppercase;">{batting_team}</span>
-        <span style="font-family:'Roboto',sans-serif;font-size:1.6rem;font-weight:900;color:#CC0000;">{score_disp}</span>
-        <span style="font-size:0.9rem;color:#666;font-weight:700;">({overs} OVERS)</span>
-        <span style="font-size:0.8rem;color:#333;margin-left:auto;font-weight:700;text-transform:uppercase;">VS {bowling_team}</span>
-      </div>
-    </div>
-  """, unsafe_allow_html=True)
+def render_custom_inning(inning):
   batters = inning.get("batters", [])
-  if batters:
-    st.markdown("<div style='font-family:\"Roboto\",sans-serif;font-size:0.85rem;font-weight:900;color:#000;text-transform:uppercase;margin-bottom:0.35rem;padding-left:0.2rem;'>Batters</div>", unsafe_allow_html=True)
-    bat_data = [{
-      "BATTER": b.get("playerName", "—"),
-      "R": b.get("runs", 0),
-      "B": b.get("balls", 0),
-      "4s": b.get("fours", 0),
-      "6s": b.get("sixes", 0),
-      "SR": b.get("strikeRate", 0.0),
-      "STATUS": "Not Out" if not b.get("dismissed") else "Out",
-    } for b in batters]
-    st.dataframe(bat_data, use_container_width=True, hide_index=True, column_config={
-      "BATTER": st.column_config.TextColumn(width="large"),
-      "R": st.column_config.NumberColumn(width="small"),
-      "B": st.column_config.NumberColumn(width="small"),
-      "4s": st.column_config.NumberColumn(width="small"),
-      "6s": st.column_config.NumberColumn(width="small"),
-      "SR": st.column_config.NumberColumn(format="%.1f", width="small"),
-      "STATUS": st.column_config.TextColumn(width="medium"),
-    })
   bowlers = inning.get("bowlers", [])
+  html = ""
+  if batters:
+    html += "<table class='custom-table'><thead><tr><th>Batters</th><th class='num'>R</th><th class='num'>B</th><th class='num'>4s</th><th class='num'>6s</th><th class='num'>SR</th></tr></thead><tbody>"
+    for b in batters:
+      name = b.get("playerName", "—")
+      status = "Not out" if not b.get("dismissed") else "Out"
+      html += f"<tr><td><div style='font-weight:700;color:#000;'>{name}</div><div style='font-size:0.7rem;color:#666;text-transform:uppercase;'>{status}</div></td><td class='num bold'>{b.get('runs',0)}</td><td class='num'>{b.get('balls',0)}</td><td class='num'>{b.get('fours',0)}</td><td class='num'>{b.get('sixes',0)}</td><td class='num'>{b.get('strikeRate',0.0):.1f}</td></tr>"
+    html += "</tbody></table>"
   if bowlers:
-    st.markdown("<div style='font-family:\"Roboto\",sans-serif;font-size:0.85rem;font-weight:900;color:#000;text-transform:uppercase;margin:1.2rem 0 0.35rem;padding-left:0.2rem;'>Bowlers</div>", unsafe_allow_html=True)
-    bowl_data = [{
-      "BOWLER": b.get("playerName", "—"),
-      "O": b.get("overs", "0.0"),
-      "R": b.get("runs", 0),
-      "W": b.get("wickets", 0),
-      "ECON": b.get("economy", 0.0),
-    } for b in bowlers]
-    st.dataframe(bowl_data, use_container_width=True, hide_index=True, column_config={
-      "BOWLER": st.column_config.TextColumn(width="large"),
-      "O": st.column_config.TextColumn(width="small"),
-      "R": st.column_config.NumberColumn(width="small"),
-      "W": st.column_config.NumberColumn(width="small"),
-      "ECON": st.column_config.NumberColumn(format="%.2f", width="small"),
-    })
+    html += "<table class='custom-table' style='margin-top:1.5rem;'><thead><tr><th>Bowlers</th><th class='num'>O</th><th class='num'>R</th><th class='num'>W</th><th class='num'>ECON</th></tr></thead><tbody>"
+    for b in bowlers:
+      html += f"<tr><td><div style='font-weight:700;color:#000;'>{b.get('playerName','—')}</div></td><td class='num'>{b.get('overs','0.0')}</td><td class='num'>{b.get('runs',0)}</td><td class='num bold'>{b.get('wickets',0)}</td><td class='num'>{b.get('economy',0.0):.2f}</td></tr>"
+    html += "</tbody></table>"
+  st.markdown(html, unsafe_allow_html=True)
 def page_scorecard(match_id):
   render_header()
   st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
@@ -226,12 +190,22 @@ def page_scorecard(match_id):
   if not innings_data:
     st.markdown("<p style='color:#666;margin-top:2rem;font-size:1rem;text-align:center;font-weight:700;text-transform:uppercase;'>Scorecard data pending.</p>", unsafe_allow_html=True)
     return
+  st.markdown("<div style='height:1.5rem'></div>", unsafe_allow_html=True)
+  tab_titles = []
   t_count_sc = {}
-  for i, inning in enumerate(innings_data, 1):
+  for inning in innings_data:
     bt = inning.get("battingTeam", "Team")
     t_count_sc[bt] = t_count_sc.get(bt, 0) + 1
-    ord_str = "1ST" if t_count_sc[bt] == 1 else "2ND"
-    render_innings(inning, f"{bt} {ord_str} INNINGS")
+    w = inning.get("wickets", 0)
+    score = f"{inning.get('runs', 0)}" if w == 10 else f"{inning.get('runs', 0)}/{w}"
+    if inning.get("isDeclared"):
+      score += "d"
+    tab_titles.append(f"{bt} {score}")
+  if tab_titles:
+    tabs = st.tabs(tab_titles)
+    for tab, inning in zip(tabs, innings_data):
+      with tab:
+        render_custom_inning(inning)
 def page_list():
   render_header()
   st.markdown("<div style='height:1rem'></div>", unsafe_allow_html=True)
