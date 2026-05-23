@@ -71,7 +71,7 @@ def render_header():
   with c1:
     st.image(logo, width=48)
   with c2:
-    st.title("ESPN Ashes")
+    st.title("Ashes")
     st.caption("Match Center")
 def render_custom_inning(inning):
   batters = inning.get("batters", [])
@@ -93,10 +93,10 @@ def render_custom_inning(inning):
 def page_scorecard(match_id):
   render_header()
   st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
-  if st.button("← Box Scores"):
+  if st.button("← Matches"):
     st.query_params.clear()
     st.rerun()
-  with st.spinner("Loading box score..."):
+  with st.spinner("Loading scorecard..."):
     match = fetch_match(match_id)
     scorecard = fetch_scorecard(match_id)
   if not match or "error" in match:
@@ -252,7 +252,7 @@ def page_list():
       """, unsafe_allow_html=True)
     with c2:
       st.markdown("<div style='height:1.6rem'></div>", unsafe_allow_html=True)
-      if st.button("Box Score", key=mid, use_container_width=True):
+      if st.button("Scorecard", key=mid, use_container_width=True):
         st.query_params["id"] = mid
         st.rerun()
 params = st.query_params
