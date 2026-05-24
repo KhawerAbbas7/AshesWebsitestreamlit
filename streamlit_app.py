@@ -4,7 +4,7 @@ import streamlit.components.v1 as components
 
 logo = "40ef4cf2ee6a72db2a5af55c231192bd.png"
 BASE = "http://51.75.118.79:20375"
-st.set_page_config(page_title="Ashes", page_icon=logo, layout="wide")
+st.set_page_config(page_title="Ashes", page_icon=logo)
 st.markdown("""
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;700&display=swap');
