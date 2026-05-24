@@ -175,17 +175,8 @@ st.markdown("""
       color: #e8e8e8 !important;
     }
 
-    /* Scorecard button: flush against card, no gap */
-    .sc-btn-wrap { margin-top: 0 !important; }
-    .sc-btn-wrap > div > button {
-      border-radius: 0 0 2px 2px !important;
-      width: 100% !important;
-      margin-top: 0 !important;
-      border-top: 1px solid #1e1e1e !important;
-    }
-
-    /* Collapse spacing around the button element */
-    .sc-btn-wrap [data-testid="stButton"] { margin: 0 !important; padding: 0 !important; }
+    /* Scorecard button flush under card — override all Streamlit button defaults */
+    .card-wrap { margin-bottom: 0 !important; }
 
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: #111; }
@@ -388,139 +379,81 @@ def page_list():
   st.markdown("<div style='height:0.75rem'></div>", unsafe_allow_html=True)
   query = st.text_input("Query", placeholder="Search matches...", label_visibility="collapsed", key="query_input")
 
-  # Animated filter panel — entirely inside components.html so CSS transition works
-  # We post a message to Streamlit to toggle session state when the button inside is clicked
   show_filters = st.session_state.get("show_filters", False)
 
-  # Render the animated filter panel + toggle button as one HTML block
-  filter_html_open = "open" if show_filters else ""
-  components.html(f"""
-    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <style>
-      * {{ box-sizing: border-box; margin: 0; padding: 0; }}
-      #filter-toggle {{
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        background: #1a1a1a;
-        border: 1px solid #2a2a2a;
-        color: #aaa;
-        font-family: 'DM Mono', monospace;
-        font-size: 0.72rem;
-        letter-spacing: 1px;
-        text-transform: uppercase;
-        padding: 0.45rem 1rem;
-        border-radius: 2px;
-        cursor: pointer;
-        transition: background 0.15s, border-color 0.15s, color 0.15s;
-        margin-bottom: 0;
-      }}
-      #filter-toggle:hover {{ background: #222; border-color: #444; color: #e8e8e8; }}
-      #filter-toggle.active {{ border-color: #CC0000; color: #CC0000; }}
-      .chevron {{
-        display: inline-block;
-        transition: transform 0.3s ease;
-        font-style: normal;
-      }}
-      #filter-toggle.active .chevron {{ transform: rotate(180deg); }}
+  # Filter toggle button — native Streamlit, styled via CSS
+  # Inject a marker so we can target the next sibling filter panel
+  st.markdown(f"<div id='filter-anchor' data-open='{'1' if show_filters else '0'}'></div>", unsafe_allow_html=True)
 
-      #filter-panel {{
+  col_btn, col_rest = st.columns([2, 8])
+  with col_btn:
+    label = "✕ Hide Filters" if show_filters else "⚙ Filters"
+    if st.button(label, key="filter_toggle", type="secondary"):
+      st.session_state["show_filters"] = not show_filters
+      st.rerun()
+
+  # Animated wrapper — CSS transition on max-height driven by data-open attribute
+  # The inner Streamlit columns are rendered inside; the wrapper height animates
+  st.markdown("""
+    <style>
+      /* Animated filter drawer */
+      .filter-drawer {
         overflow: hidden;
-        max-height: 0;
+        transition: max-height 0.38s cubic-bezier(0.4,0,0.2,1),
+                    opacity 0.28s ease,
+                    margin-top 0.3s ease;
+      }
+      .filter-drawer.closed {
+        max-height: 0 !important;
         opacity: 0;
-        transition: max-height 0.35s cubic-bezier(0.4,0,0.2,1), opacity 0.25s ease;
-        margin-top: 0;
-      }}
-      #filter-panel.open {{
+        margin-top: 0 !important;
+        pointer-events: none;
+      }
+      .filter-drawer.open {
         max-height: 120px;
         opacity: 1;
-        margin-top: 10px;
-      }}
-      .filter-row {{
-        display: grid;
-        grid-template-columns: 1fr 1fr 1fr;
-        gap: 8px;
-        padding-top: 2px;
-      }}
-      .filter-row input {{
-        background: #1a1a1a;
-        border: 1px solid #2a2a2a;
-        color: #e8e8e8;
-        font-family: 'DM Mono', monospace;
-        font-size: 0.8rem;
-        border-radius: 2px;
-        padding: 0.45rem 0.7rem;
-        width: 100%;
-        outline: none;
-        transition: border-color 0.15s;
-      }}
-      .filter-row input::placeholder {{ color: #444; }}
-      .filter-row input:focus {{ border-color: #CC0000; }}
+        margin-top: 0.5rem;
+      }
+      /* Chevron on the filter toggle button when active */
+      #filter-anchor[data-open='1'] ~ div button[kind="secondary"],
+      #filter-anchor[data-open='1'] ~ div button[data-testid="stBaseButton-secondary"] {
+        border-color: #CC0000 !important;
+        color: #CC0000 !important;
+      }
+      /* Remove gap between match card and scorecard button */
+      .card-wrap { margin-bottom: 0 !important; }
+      .card-wrap + div [data-testid="stButton"] > button {
+        margin-top: 0 !important;
+        border-top: none !important;
+        border-radius: 0 0 2px 2px !important;
+        background: #1a1a1a !important;
+        border-color: #1e1e1e !important;
+        color: #555 !important;
+        font-size: 0.72rem !important;
+        letter-spacing: 1.5px !important;
+        width: 100% !important;
+        padding: 0.5rem !important;
+      }
+      .card-wrap + div [data-testid="stButton"] > button:hover {
+        background: #CC0000 !important;
+        color: #fff !important;
+        border-color: #CC0000 !important;
+      }
     </style>
+  """, unsafe_allow_html=True)
 
-    <button id="filter-toggle" class="{'active' if show_filters else ''}" onclick="toggleFilters()">
-      <span>⚙</span>
-      <span id="btn-label">{'Hide Filters' if show_filters else 'Filters'}</span>
-      <i class="chevron">▾</i>
-    </button>
-
-    <div id="filter-panel" class="{filter_html_open}">
-      <div class="filter-row">
-        <input id="f-guild" type="text" placeholder="Server ID" value="">
-        <input id="f-channel" type="text" placeholder="Channel ID" value="">
-        <input id="f-player" type="text" placeholder="Player ID" value="">
-      </div>
-    </div>
-
-    <script>
-      var isOpen = {'true' if show_filters else 'false'};
-
-      function toggleFilters() {{
-        isOpen = !isOpen;
-        var panel = document.getElementById('filter-panel');
-        var btn = document.getElementById('filter-toggle');
-        var label = document.getElementById('btn-label');
-        if (isOpen) {{
-          panel.classList.add('open');
-          btn.classList.add('active');
-          label.textContent = 'Hide Filters';
-        }} else {{
-          panel.classList.remove('open');
-          btn.classList.remove('active');
-          label.textContent = 'Filters';
-        }}
-        // Notify Streamlit after transition settles
-        setTimeout(function() {{
-          window.parent.postMessage({{
-            type: 'streamlit:setComponentValue',
-            value: {{
-              action: 'toggle_filters',
-              open: isOpen,
-              guild: document.getElementById('f-guild').value,
-              channel: document.getElementById('f-channel').value,
-              player: document.getElementById('f-player').value
-            }}
-          }}, '*');
-        }}, 360);
-      }}
-    </script>
-  """, height=120 if show_filters else 55, key="filter_component")
-
-  # Read filter values from session state (set by the component above on toggle)
-  guild_id = st.session_state.get("filter_guild", "")
-  channel_id = st.session_state.get("filter_channel", "")
-  player_id = st.session_state.get("filter_player", "")
-
-  # Handle component return value
-  component_val = st.session_state.get("filter_component")
-  if isinstance(component_val, dict) and component_val.get("action") == "toggle_filters":
-    new_open = component_val.get("open", show_filters)
-    if new_open != show_filters:
-      st.session_state["show_filters"] = new_open
-      st.session_state["filter_guild"] = component_val.get("guild", "")
-      st.session_state["filter_channel"] = component_val.get("channel", "")
-      st.session_state["filter_player"] = component_val.get("player", "")
-      st.rerun()
+  drawer_class = "open" if show_filters else "closed"
+  st.markdown(f"<div class='filter-drawer {drawer_class}'>", unsafe_allow_html=True)
+  if show_filters:
+    f1, f2, f3 = st.columns(3)
+    with f1: guild_id = st.text_input("Server", placeholder="Server ID", label_visibility="collapsed", key="fi_guild")
+    with f2: channel_id = st.text_input("Channel", placeholder="Channel ID", label_visibility="collapsed", key="fi_channel")
+    with f3: player_id = st.text_input("Player", placeholder="Player ID", label_visibility="collapsed", key="fi_player")
+  else:
+    guild_id = ""
+    channel_id = ""
+    player_id = ""
+  st.markdown("</div>", unsafe_allow_html=True)
 
   matches = fetch_matches(query, channel_id, guild_id, player_id)
   if not matches:
@@ -542,87 +475,65 @@ def page_list():
       if inn.get("isDeclared"): score += "d"
       if inn.get("battingTeam") == team_a: ta_scores.append(score)
       elif inn.get("battingTeam") == team_b: tb_scores.append(score)
-    ta_str = f"<span style='font-family:DM Mono,monospace;color:#CC0000;font-size:0.95rem;margin-left:0.4rem;font-weight:500;'>{' & '.join(ta_scores)}</span>" if ta_scores else ""
-    tb_str = f"<span style='font-family:DM Mono,monospace;color:#CC0000;font-size:0.95rem;margin-left:0.4rem;font-weight:500;'>{' & '.join(tb_scores)}</span>" if tb_scores else ""
     res_text = get_result_text(match)
     guild = match.get("guildName", "")
     channel = match.get("channelName", "")
     time_span = f'<span class="ts" data-ts="{ts}"></span>' if ts else ""
+    ta_score_str = ' & '.join(ta_scores)
+    tb_score_str = ' & '.join(tb_scores)
+    ta_score_html = f"<span class='score'>{ta_score_str}</span>" if ta_scores else ""
+    tb_score_html = f"<span class='score'>{tb_score_str}</span>" if tb_scores else ""
 
-    # Card + button rendered as a single HTML block to eliminate the gap
+    # Card as pure HTML (no key needed, no navigation from inside)
+    st.markdown(f"<div class='card-wrap'>", unsafe_allow_html=True)
     components.html(f"""
-      <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;700&display=swap" rel="stylesheet">
+      <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
       <style>
         * {{ box-sizing: border-box; margin: 0; padding: 0; }}
+        body {{ background: transparent; }}
         .card {{
           background: #161616;
           border: 1px solid #1e1e1e;
           border-left: 3px solid #CC0000;
-          border-bottom: none;
-          padding: 0.85rem 1.1rem 0.75rem;
-          font-family: 'DM Sans', sans-serif;
+          padding: 0.85rem 1.1rem 0.8rem;
         }}
-        .sc-btn {{
-          display: block;
-          width: 100%;
-          background: #1a1a1a;
-          border: 1px solid #1e1e1e;
-          border-top: none;
-          color: #666;
-          font-family: 'DM Mono', monospace;
-          font-size: 0.72rem;
-          letter-spacing: 1.5px;
-          text-transform: uppercase;
-          padding: 0.5rem;
-          text-align: center;
-          cursor: pointer;
-          transition: background 0.15s, color 0.15s;
-          border-radius: 0 0 2px 2px;
-        }}
-        .sc-btn:hover {{ background: #CC0000; color: #fff; border-color: #CC0000; }}
-        .meta {{ font-family: 'DM Mono', monospace; font-size: 0.58rem; font-weight: 500; color: #3a3a3a; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 0.35rem; }}
+        .meta {{ font-family: 'DM Mono', monospace; font-size: 0.58rem; color: #3a3a3a; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 0.35rem; }}
         .teams {{ font-family: 'Bebas Neue', sans-serif; font-size: 1.35rem; letter-spacing: 1.5px; color: #e8e8e8; margin-bottom: 0.45rem; }}
-        .score {{ font-family: 'DM Mono', monospace; color: #CC0000; font-size: 0.9rem; margin-left: 0.35rem; }}
-        .vs {{ color: #252525; font-size: 0.85rem; margin: 0 0.35rem; }}
+        .score {{ font-family: 'DM Mono', monospace; color: #CC0000; font-size: 0.88rem; margin-left: 0.3rem; }}
+        .vs {{ color: #2a2a2a; font-size: 0.85rem; margin: 0 0.35rem; }}
         .result-pill {{
           display: inline-flex; align-items: center;
           background: #111; border: 1px solid #1e1e1e;
-          color: #888; font-family: 'DM Mono', monospace;
-          font-size: 0.65rem; font-weight: 500;
-          padding: 0.2rem 0.65rem; border-radius: 2px;
-          text-transform: uppercase; letter-spacing: 0.5px;
+          color: #777; font-family: 'DM Mono', monospace;
+          font-size: 0.63rem; padding: 0.2rem 0.65rem;
+          border-radius: 2px; text-transform: uppercase; letter-spacing: 0.5px;
         }}
         .res-label {{ color: #CC0000; margin-right: 5px; }}
       </style>
-
       <div class="card">
         <div class="meta">{time_span} {guild} · {channel}</div>
         <div class="teams">
-          {team_a}<span class="score">{' & '.join(ta_scores) if ta_scores else ''}</span>
+          {team_a}{ta_score_html}
           <span class="vs">VS</span>
-          {team_b}<span class="score">{' & '.join(tb_scores) if tb_scores else ''}</span>
+          {team_b}{tb_score_html}
         </div>
         <div class="result-pill"><span class="res-label">RES</span>{res_text}</div>
       </div>
-      <button class="sc-btn" onclick="
-        window.parent.postMessage({{type:'streamlit:setComponentValue', value:{{action:'go_scorecard', id:'{mid}'}}}}, '*');
-      ">Scorecard →</button>
-
       <script>
         document.querySelectorAll('.ts').forEach(function(el) {{
           var d = new Date(parseInt(el.getAttribute('data-ts')) * 1000);
           el.textContent = d.toLocaleString([], {{dateStyle:'medium', timeStyle:'short'}}) + ' ·';
         }});
       </script>
-    """, height=130, key=f"card_{mid}")
+    """, height=112)
+    st.markdown("</div>", unsafe_allow_html=True)
 
-    # Handle scorecard navigation from card button
-    card_val = st.session_state.get(f"card_{mid}")
-    if isinstance(card_val, dict) and card_val.get("action") == "go_scorecard":
-      st.query_params["id"] = card_val["id"]
+    # Native button for navigation — styled via CSS above to look flush with the card
+    if st.button("Scorecard →", key=f"sc_{mid}", use_container_width=True):
+      st.query_params["id"] = mid
       st.rerun()
 
-    st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='height:0.6rem'></div>", unsafe_allow_html=True)
 
 params = st.query_params
 match_id = params.get("id", None)
