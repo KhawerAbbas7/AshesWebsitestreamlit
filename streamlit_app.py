@@ -16,26 +16,43 @@ st.markdown("""
     }
 
     .block-container {
-      padding: 2rem 3rem 4rem;
+      padding: 1.5rem 2rem 4rem;
       max-width: 1080px;
       background: #111111;
       box-shadow: 0 0 0 1px #222, 0 8px 32px rgba(0,0,0,0.6);
-      margin-top: 2rem;
+      margin-top: 1rem;
       border-top: 3px solid #CC0000;
     }
 
+    /* Hide default streamlit image caption gap */
+    [data-testid="stImage"] { margin-bottom: 0 !important; }
+
     h1 {
       font-family: 'Bebas Neue', sans-serif;
-      font-size: 2.8rem;
-      letter-spacing: 2px;
-      margin: 0;
+      font-size: 2.6rem;
+      letter-spacing: 3px;
+      margin: 0 !important;
+      padding: 0 !important;
       color: #CC0000;
       line-height: 1;
     }
 
+    /* Collapse gap under h1 */
+    h1 + div, h1 + p { margin-top: 0 !important; }
+
     h2, h3 {
       font-weight: 700;
       color: #e8e8e8;
+    }
+
+    /* Caption under title */
+    [data-testid="stCaptionContainer"] p {
+      font-family: 'DM Mono', monospace !important;
+      font-size: 0.65rem !important;
+      color: #444 !important;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-top: 0 !important;
     }
 
     .stButton > button {
@@ -68,9 +85,7 @@ st.markdown("""
       padding: 0.5rem 0.8rem;
     }
 
-    .stTextInput > div > input::placeholder {
-      color: #555;
-    }
+    .stTextInput > div > input::placeholder { color: #555; }
 
     .stTextInput > div > input:focus {
       border-color: #CC0000;
@@ -103,19 +118,12 @@ st.markdown("""
       color: #ccc;
     }
 
-    table.custom-table tr:hover td {
-      background: #161616;
-    }
+    table.custom-table tr:hover td { background: #161616; }
 
     table.custom-table th.num,
-    table.custom-table td.num {
-      text-align: right;
-    }
+    table.custom-table td.num { text-align: right; }
 
-    table.custom-table td.bold {
-      font-weight: 700;
-      color: #fff;
-    }
+    table.custom-table td.bold { font-weight: 700; color: #fff; }
 
     .stTabs [data-baseweb="tab-list"] {
       gap: 4px;
@@ -167,13 +175,18 @@ st.markdown("""
       color: #e8e8e8 !important;
     }
 
-    .match-scorecard-btn > div > button {
-      margin-top: -0.6rem !important;
+    /* Scorecard button: flush against card, no gap */
+    .sc-btn-wrap { margin-top: 0 !important; }
+    .sc-btn-wrap > div > button {
       border-radius: 0 0 2px 2px !important;
       width: 100% !important;
+      margin-top: 0 !important;
+      border-top: 1px solid #1e1e1e !important;
     }
 
-    /* Scrollbar */
+    /* Collapse spacing around the button element */
+    .sc-btn-wrap [data-testid="stButton"] { margin: 0 !important; padding: 0 !important; }
+
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: #111; }
     ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
@@ -229,71 +242,33 @@ def get_result_text(match):
 
 def render_header():
   c1, c2 = st.columns([1, 11])
-  with c1: st.image(logo, width=48)
+  with c1:
+    st.markdown("<div style='padding-top:4px;'>", unsafe_allow_html=True)
+    st.image(logo, width=44)
+    st.markdown("</div>", unsafe_allow_html=True)
   with c2:
-    st.title("Ashes")
-    st.caption("Match Center")
+    st.markdown("""
+      <div style='padding-top:2px;'>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:2.6rem;letter-spacing:3px;color:#CC0000;line-height:1;margin:0;">ASHES</div>
+        <div style="font-family:'DM Mono',monospace;font-size:0.6rem;color:#444;text-transform:uppercase;letter-spacing:2.5px;margin-top:2px;">Match Center</div>
+      </div>
+    """, unsafe_allow_html=True)
 
 def render_custom_inning(inning):
   batters = inning.get("batters", [])
   bowlers = inning.get("bowlers", [])
   html = ""
   if batters:
-    html += """
-      <table class='custom-table'>
-        <thead>
-          <tr>
-            <th>Batters</th>
-            <th class='num'>R</th>
-            <th class='num'>B</th>
-            <th class='num'>4s</th>
-            <th class='num'>6s</th>
-            <th class='num'>SR</th>
-          </tr>
-        </thead>
-        <tbody>
-    """
+    html += "<table class='custom-table'><thead><tr><th>Batters</th><th class='num'>R</th><th class='num'>B</th><th class='num'>4s</th><th class='num'>6s</th><th class='num'>SR</th></tr></thead><tbody>"
     for b in batters:
       name = b.get("playerName", "—")
       status = b.get('dismissedBy', '')
-      html += f"""
-        <tr>
-          <td>
-            <div style='font-weight:700;color:#e8e8e8;'>{name}</div>
-            <div style='font-size:0.7rem;color:#555;text-transform:uppercase;font-family:DM Mono,monospace;'>{status}</div>
-          </td>
-          <td class='num bold'>{b.get('runs', 0)}</td>
-          <td class='num'>{b.get('balls', 0)}</td>
-          <td class='num'>{b.get('fours', 0)}</td>
-          <td class='num'>{b.get('sixes', 0)}</td>
-          <td class='num'>{b.get('strikeRate', 0.0):.1f}</td>
-        </tr>
-      """
+      html += f"<tr><td><div style='font-weight:700;color:#e8e8e8;'>{name}</div><div style='font-size:0.7rem;color:#555;text-transform:uppercase;font-family:DM Mono,monospace;'>{status}</div></td><td class='num bold'>{b.get('runs',0)}</td><td class='num'>{b.get('balls',0)}</td><td class='num'>{b.get('fours',0)}</td><td class='num'>{b.get('sixes',0)}</td><td class='num'>{b.get('strikeRate',0.0):.1f}</td></tr>"
     html += "</tbody></table>"
   if bowlers:
-    html += """
-      <table class='custom-table' style='margin-top:1.5rem;'>
-        <thead>
-          <tr>
-            <th>Bowlers</th>
-            <th class='num'>O</th>
-            <th class='num'>R</th>
-            <th class='num'>W</th>
-            <th class='num'>ECON</th>
-          </tr>
-        </thead>
-        <tbody>
-    """
+    html += "<table class='custom-table' style='margin-top:1.5rem;'><thead><tr><th>Bowlers</th><th class='num'>O</th><th class='num'>R</th><th class='num'>W</th><th class='num'>ECON</th></tr></thead><tbody>"
     for b in bowlers:
-      html += f"""
-        <tr>
-          <td><div style='font-weight:700;color:#e8e8e8;'>{b.get('playerName', '—')}</div></td>
-          <td class='num'>{b.get('overs', '0.0')}</td>
-          <td class='num'>{b.get('runs', 0)}</td>
-          <td class='num bold'>{b.get('wickets', 0)}</td>
-          <td class='num'>{b.get('economy', 0.0):.2f}</td>
-        </tr>
-      """
+      html += f"<tr><td><div style='font-weight:700;color:#e8e8e8;'>{b.get('playerName','—')}</div></td><td class='num'>{b.get('overs','0.0')}</td><td class='num'>{b.get('runs',0)}</td><td class='num bold'>{b.get('wickets',0)}</td><td class='num'>{b.get('economy',0.0):.2f}</td></tr>"
     html += "</tbody></table>"
   st.markdown(html, unsafe_allow_html=True)
 
@@ -379,7 +354,7 @@ def page_scorecard(match_id):
           '<div style="flex:0 0 auto;min-width:90px;text-align:center;border-right:1px solid #1e1e1e;padding:0 0.8rem;">'
           f'<div style="font-family:\'DM Mono\',monospace;font-size:0.55rem;font-weight:500;color:#444;text-transform:uppercase;letter-spacing:1px;margin-bottom:0.25rem;">{bt} {ord_str}</div>'
           f'<div style="font-family:\'DM Mono\',monospace;font-size:1.2rem;font-weight:500;color:#e8e8e8;">{score}</div>'
-          f'<div style="font-family:\'DM Mono\',monospace;font-size:0.65rem;color:#444;letter-spacing:0.5px;">{inn.get("overs", "0.0")} OV</div>'
+          f'<div style="font-family:\'DM Mono\',monospace;font-size:0.65rem;color:#444;letter-spacing:0.5px;">{inn.get("overs","0.0")} OV</div>'
           '</div>'
         )
       components.html(f"""
@@ -410,24 +385,150 @@ def page_scorecard(match_id):
 
 def page_list():
   render_header()
-  st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
+  st.markdown("<div style='height:0.75rem'></div>", unsafe_allow_html=True)
   query = st.text_input("Query", placeholder="Search matches...", label_visibility="collapsed", key="query_input")
+
+  # Animated filter panel — entirely inside components.html so CSS transition works
+  # We post a message to Streamlit to toggle session state when the button inside is clicked
   show_filters = st.session_state.get("show_filters", False)
-  if st.button("⚙ Filters" if not show_filters else "✕ Hide Filters", key="filter_toggle", type="secondary"):
-    st.session_state["show_filters"] = not show_filters
-    st.rerun()
-  guild_id = ""
-  channel_id = ""
-  player_id = ""
-  if st.session_state.get("show_filters", False):
-    f1, f2, f3 = st.columns(3)
-    with f1: guild_id = st.text_input("Server", placeholder="Server ID", label_visibility="collapsed")
-    with f2: channel_id = st.text_input("Channel", placeholder="Channel ID", label_visibility="collapsed")
-    with f3: player_id = st.text_input("Player", placeholder="Player ID", label_visibility="collapsed")
+
+  # Render the animated filter panel + toggle button as one HTML block
+  filter_html_open = "open" if show_filters else ""
+  components.html(f"""
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+      * {{ box-sizing: border-box; margin: 0; padding: 0; }}
+      #filter-toggle {{
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: #1a1a1a;
+        border: 1px solid #2a2a2a;
+        color: #aaa;
+        font-family: 'DM Mono', monospace;
+        font-size: 0.72rem;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        padding: 0.45rem 1rem;
+        border-radius: 2px;
+        cursor: pointer;
+        transition: background 0.15s, border-color 0.15s, color 0.15s;
+        margin-bottom: 0;
+      }}
+      #filter-toggle:hover {{ background: #222; border-color: #444; color: #e8e8e8; }}
+      #filter-toggle.active {{ border-color: #CC0000; color: #CC0000; }}
+      .chevron {{
+        display: inline-block;
+        transition: transform 0.3s ease;
+        font-style: normal;
+      }}
+      #filter-toggle.active .chevron {{ transform: rotate(180deg); }}
+
+      #filter-panel {{
+        overflow: hidden;
+        max-height: 0;
+        opacity: 0;
+        transition: max-height 0.35s cubic-bezier(0.4,0,0.2,1), opacity 0.25s ease;
+        margin-top: 0;
+      }}
+      #filter-panel.open {{
+        max-height: 120px;
+        opacity: 1;
+        margin-top: 10px;
+      }}
+      .filter-row {{
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 8px;
+        padding-top: 2px;
+      }}
+      .filter-row input {{
+        background: #1a1a1a;
+        border: 1px solid #2a2a2a;
+        color: #e8e8e8;
+        font-family: 'DM Mono', monospace;
+        font-size: 0.8rem;
+        border-radius: 2px;
+        padding: 0.45rem 0.7rem;
+        width: 100%;
+        outline: none;
+        transition: border-color 0.15s;
+      }}
+      .filter-row input::placeholder {{ color: #444; }}
+      .filter-row input:focus {{ border-color: #CC0000; }}
+    </style>
+
+    <button id="filter-toggle" class="{'active' if show_filters else ''}" onclick="toggleFilters()">
+      <span>⚙</span>
+      <span id="btn-label">{'Hide Filters' if show_filters else 'Filters'}</span>
+      <i class="chevron">▾</i>
+    </button>
+
+    <div id="filter-panel" class="{filter_html_open}">
+      <div class="filter-row">
+        <input id="f-guild" type="text" placeholder="Server ID" value="">
+        <input id="f-channel" type="text" placeholder="Channel ID" value="">
+        <input id="f-player" type="text" placeholder="Player ID" value="">
+      </div>
+    </div>
+
+    <script>
+      var isOpen = {'true' if show_filters else 'false'};
+
+      function toggleFilters() {{
+        isOpen = !isOpen;
+        var panel = document.getElementById('filter-panel');
+        var btn = document.getElementById('filter-toggle');
+        var label = document.getElementById('btn-label');
+        if (isOpen) {{
+          panel.classList.add('open');
+          btn.classList.add('active');
+          label.textContent = 'Hide Filters';
+        }} else {{
+          panel.classList.remove('open');
+          btn.classList.remove('active');
+          label.textContent = 'Filters';
+        }}
+        // Notify Streamlit after transition settles
+        setTimeout(function() {{
+          window.parent.postMessage({{
+            type: 'streamlit:setComponentValue',
+            value: {{
+              action: 'toggle_filters',
+              open: isOpen,
+              guild: document.getElementById('f-guild').value,
+              channel: document.getElementById('f-channel').value,
+              player: document.getElementById('f-player').value
+            }}
+          }}, '*');
+        }}, 360);
+      }}
+    </script>
+  """, height=120 if show_filters else 55, key="filter_component")
+
+  # Read filter values from session state (set by the component above on toggle)
+  guild_id = st.session_state.get("filter_guild", "")
+  channel_id = st.session_state.get("filter_channel", "")
+  player_id = st.session_state.get("filter_player", "")
+
+  # Handle component return value
+  component_val = st.session_state.get("filter_component")
+  if isinstance(component_val, dict) and component_val.get("action") == "toggle_filters":
+    new_open = component_val.get("open", show_filters)
+    if new_open != show_filters:
+      st.session_state["show_filters"] = new_open
+      st.session_state["filter_guild"] = component_val.get("guild", "")
+      st.session_state["filter_channel"] = component_val.get("channel", "")
+      st.session_state["filter_player"] = component_val.get("player", "")
+      st.rerun()
+
   matches = fetch_matches(query, channel_id, guild_id, player_id)
   if not matches:
     st.markdown("<p style='color:#333;font-size:1rem;font-weight:700;text-align:center;margin-top:4rem;text-transform:uppercase;font-family:DM Mono,monospace;letter-spacing:3px;'>No Results Found</p>", unsafe_allow_html=True)
     return
+
+  st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
+
   for match in matches:
     mid = match["id"]
     team_a = match.get("teamAName", "Team A")
@@ -447,29 +548,81 @@ def page_list():
     guild = match.get("guildName", "")
     channel = match.get("channelName", "")
     time_span = f'<span class="ts" data-ts="{ts}"></span>' if ts else ""
+
+    # Card + button rendered as a single HTML block to eliminate the gap
     components.html(f"""
       <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;700&display=swap" rel="stylesheet">
-      <div style="background:#161616;border:1px solid #1e1e1e;border-left:3px solid #CC0000;padding:1rem 1.2rem;font-family:'DM Sans',sans-serif;">
-        <div style="font-family:'DM Mono',monospace;font-size:0.6rem;font-weight:500;color:#444;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:0.4rem;">{time_span} {guild} · {channel}</div>
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:1.4rem;letter-spacing:1.5px;color:#e8e8e8;margin-bottom:0.5rem;">
-          {team_a} {ta_str} <span style="color:#2a2a2a;font-size:0.9rem;margin:0 0.4rem;">VS</span> {team_b} {tb_str}
+      <style>
+        * {{ box-sizing: border-box; margin: 0; padding: 0; }}
+        .card {{
+          background: #161616;
+          border: 1px solid #1e1e1e;
+          border-left: 3px solid #CC0000;
+          border-bottom: none;
+          padding: 0.85rem 1.1rem 0.75rem;
+          font-family: 'DM Sans', sans-serif;
+        }}
+        .sc-btn {{
+          display: block;
+          width: 100%;
+          background: #1a1a1a;
+          border: 1px solid #1e1e1e;
+          border-top: none;
+          color: #666;
+          font-family: 'DM Mono', monospace;
+          font-size: 0.72rem;
+          letter-spacing: 1.5px;
+          text-transform: uppercase;
+          padding: 0.5rem;
+          text-align: center;
+          cursor: pointer;
+          transition: background 0.15s, color 0.15s;
+          border-radius: 0 0 2px 2px;
+        }}
+        .sc-btn:hover {{ background: #CC0000; color: #fff; border-color: #CC0000; }}
+        .meta {{ font-family: 'DM Mono', monospace; font-size: 0.58rem; font-weight: 500; color: #3a3a3a; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 0.35rem; }}
+        .teams {{ font-family: 'Bebas Neue', sans-serif; font-size: 1.35rem; letter-spacing: 1.5px; color: #e8e8e8; margin-bottom: 0.45rem; }}
+        .score {{ font-family: 'DM Mono', monospace; color: #CC0000; font-size: 0.9rem; margin-left: 0.35rem; }}
+        .vs {{ color: #252525; font-size: 0.85rem; margin: 0 0.35rem; }}
+        .result-pill {{
+          display: inline-flex; align-items: center;
+          background: #111; border: 1px solid #1e1e1e;
+          color: #888; font-family: 'DM Mono', monospace;
+          font-size: 0.65rem; font-weight: 500;
+          padding: 0.2rem 0.65rem; border-radius: 2px;
+          text-transform: uppercase; letter-spacing: 0.5px;
+        }}
+        .res-label {{ color: #CC0000; margin-right: 5px; }}
+      </style>
+
+      <div class="card">
+        <div class="meta">{time_span} {guild} · {channel}</div>
+        <div class="teams">
+          {team_a}<span class="score">{' & '.join(ta_scores) if ta_scores else ''}</span>
+          <span class="vs">VS</span>
+          {team_b}<span class="score">{' & '.join(tb_scores) if tb_scores else ''}</span>
         </div>
-        <div style="display:inline-flex;align-items:center;background:#111;border:1px solid #1e1e1e;color:#aaa;font-family:'DM Mono',monospace;font-size:0.68rem;font-weight:500;padding:0.25rem 0.7rem;border-radius:2px;text-transform:uppercase;letter-spacing:0.5px;">
-          <span style="color:#CC0000;margin-right:6px;font-weight:500;">RES</span>{res_text}
-        </div>
+        <div class="result-pill"><span class="res-label">RES</span>{res_text}</div>
       </div>
+      <button class="sc-btn" onclick="
+        window.parent.postMessage({{type:'streamlit:setComponentValue', value:{{action:'go_scorecard', id:'{mid}'}}}}, '*');
+      ">Scorecard →</button>
+
       <script>
         document.querySelectorAll('.ts').forEach(function(el) {{
-          el.textContent = new Date(parseInt(el.getAttribute('data-ts')) * 1000).toLocaleString([], {{dateStyle:'medium', timeStyle:'short'}}) + ' ·';
+          var d = new Date(parseInt(el.getAttribute('data-ts')) * 1000);
+          el.textContent = d.toLocaleString([], {{dateStyle:'medium', timeStyle:'short'}}) + ' ·';
         }});
       </script>
-    """, height=105)
-    st.markdown("<div class='match-scorecard-btn'>", unsafe_allow_html=True)
-    if st.button("Scorecard →", key=f"sc_{mid}", use_container_width=True):
-      st.query_params["id"] = mid
+    """, height=130, key=f"card_{mid}")
+
+    # Handle scorecard navigation from card button
+    card_val = st.session_state.get(f"card_{mid}")
+    if isinstance(card_val, dict) and card_val.get("action") == "go_scorecard":
+      st.query_params["id"] = card_val["id"]
       st.rerun()
-    st.markdown("</div>", unsafe_allow_html=True)
-    st.markdown("<div style='height:0.6rem'></div>", unsafe_allow_html=True)
+
+    st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
 
 params = st.query_params
 match_id = params.get("id", None)
