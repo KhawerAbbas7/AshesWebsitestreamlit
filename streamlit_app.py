@@ -2,7 +2,7 @@ import streamlit as st
 import requests
 import streamlit.components.v1 as components
 pg = st.navigation([
-  st.Page("streamlit_app.py", title="Matches"),
+  #st.Page("streamlit_app.py", title="Matches"),
   st.Page("pages/1_playersStats.py", title="Player Stats"),
 ])
 pg.run()
