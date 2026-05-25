@@ -1,7 +1,11 @@
 import streamlit as st
 import requests
 import streamlit.components.v1 as components
-
+pg = st.navigation([
+  st.Page("streamlit_app.py", title="Matches"),
+  st.Page("1_playersStats.py", title="Player Stats"),
+])
+pg.run()
 logo = "40ef4cf2ee6a72db2a5af55c231192bd.png"
 BASE = "http://51.75.118.79:20375"
 st.set_page_config(page_title="Ashes", page_icon=logo)
