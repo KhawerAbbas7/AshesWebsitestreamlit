@@ -3,7 +3,7 @@ import requests
 import streamlit.components.v1 as components
 pg = st.navigation([
   st.Page("streamlit_app.py", title="Matches"),
-  st.Page("1_playersStats.py", title="Player Stats"),
+  st.Page("pages/1_playersStats.py", title="Player Stats"),
 ])
 pg.run()
 logo = "40ef4cf2ee6a72db2a5af55c231192bd.png"
