@@ -1,9 +1,10 @@
 import streamlit as st
 import requests
 import streamlit.components.v1 as components
+
 logo = "40ef4cf2ee6a72db2a5af55c231192bd.png"
 BASE = "http://51.75.118.79:20375"
-st.set_page_config(page_title="Ashes", page_icon=logo)
+st.set_page_config(page_title="Ashes", page_icon=logo, layout="wide")
 st.markdown("""
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;700&display=swap');
@@ -213,6 +214,22 @@ def fetch_match(match_id):
   except Exception:
     return {}
 
+@st.cache_data(ttl=10)
+def fetch_live_matches():
+  try:
+    r = requests.get(f"{BASE}/matches/live", timeout=5)
+    return r.json().get("matches", [])
+  except Exception:
+    return []
+
+@st.cache_data(ttl=10)
+def fetch_live_match(match_id):
+  try:
+    r = requests.get(f"{BASE}/matches/{match_id}/live", timeout=8)
+    return r.json()
+  except Exception:
+    return {}
+
 def get_result_text(match):
   w = match.get("winner", "—")
   if w.lower() in ["drawn", "—", "tie", "tied"]: return w
@@ -373,170 +390,430 @@ def page_scorecard(match_id):
     for tab, inning in zip(tabs, innings_data):
       with tab: render_custom_inning(inning)
 
+def render_live_card(match):
+  mid = match.get("id", "")
+  team_a = match.get("teamAName", "Team A")
+  team_b = match.get("teamBName", "Team B")
+  state = match.get("state", "lobby")  # "lobby" or "live"
+  guild = match.get("guildName", "")
+  channel = match.get("channelName", "")
+  innings_summary = match.get("innings", [])
+
+  ta_scores = []
+  tb_scores = []
+  for inn in innings_summary:
+    w = inn.get("wickets", 0)
+    score = f"{inn.get('runs', 0)}" if w == 10 else f"{inn.get('runs', 0)}/{w}"
+    if inn.get("isDeclared"): score += "d"
+    if inn.get("battingTeam") == team_a: ta_scores.append(score)
+    elif inn.get("battingTeam") == team_b: tb_scores.append(score)
+  ta_score_str = ' & '.join(ta_scores)
+  tb_score_str = ' & '.join(tb_scores)
+  ta_score_html = f"<span class='score'>{ta_score_str}</span>" if ta_scores else ""
+  tb_score_html = f"<span class='score'>{tb_score_str}</span>" if tb_scores else ""
+
+  if state == "lobby":
+    state_html = "<span class='state-pill lobby'>⏳ Lobby</span>"
+    # Show team rosters if available
+    players_a = match.get("teamAPlayers", [])
+    players_b = match.get("teamBPlayers", [])
+    roster_a = " · ".join([p.get("name", p) if isinstance(p, dict) else str(p) for p in players_a[:5]])
+    roster_b = " · ".join([p.get("name", p) if isinstance(p, dict) else str(p) for p in players_b[:5]])
+    extra_html = f"""
+      <div class='roster-row'><span class='roster-label'>{team_a}</span> <span class='roster-names'>{roster_a or '—'}</span></div>
+      <div class='roster-row'><span class='roster-label'>{team_b}</span> <span class='roster-names'>{roster_b or '—'}</span></div>
+    """
+  else:
+    state_html = "<span class='state-pill live'><span class='live-dot'></span>Live</span>"
+    extra_html = ""
+
+  st.markdown("<div class='card-wrap'>", unsafe_allow_html=True)
+  components.html(f"""
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+      * {{ box-sizing: border-box; margin: 0; padding: 0; }}
+      body {{ background: transparent; }}
+      .card {{
+        background: #161616;
+        border: 1px solid #1e1e1e;
+        border-left: 3px solid {'#00cc66' if state == 'live' else '#886600'};
+        padding: 0.85rem 1.1rem 0.8rem;
+      }}
+      .meta {{ font-family: 'DM Mono', monospace; font-size: 0.58rem; color: #3a3a3a; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 0.35rem; display: flex; align-items: center; gap: 0.5rem; }}
+      .teams {{ font-family: 'Bebas Neue', sans-serif; font-size: 1.35rem; letter-spacing: 1.5px; color: #e8e8e8; margin-bottom: 0.45rem; }}
+      .score {{ font-family: 'DM Mono', monospace; color: #CC0000; font-size: 0.88rem; margin-left: 0.3rem; }}
+      .vs {{ color: #2a2a2a; font-size: 0.85rem; margin: 0 0.35rem; }}
+      .state-pill {{
+        display: inline-flex; align-items: center; gap: 5px;
+        font-family: 'DM Mono', monospace; font-size: 0.6rem; font-weight: 500;
+        padding: 0.15rem 0.55rem; border-radius: 2px; text-transform: uppercase; letter-spacing: 1px;
+      }}
+      .state-pill.live {{ background: rgba(0,204,102,0.12); color: #00cc66; border: 1px solid rgba(0,204,102,0.25); }}
+      .state-pill.lobby {{ background: rgba(204,170,0,0.1); color: #ccaa00; border: 1px solid rgba(204,170,0,0.2); }}
+      .live-dot {{
+        width: 6px; height: 6px; border-radius: 50%; background: #00cc66;
+        animation: pulse 1.2s ease-in-out infinite;
+      }}
+      @keyframes pulse {{ 0%,100% {{ opacity: 1; transform: scale(1); }} 50% {{ opacity: 0.4; transform: scale(0.7); }} }}
+      .roster-row {{ display: flex; gap: 0.4rem; align-items: baseline; margin-top: 0.3rem; }}
+      .roster-label {{ font-family: 'DM Mono', monospace; font-size: 0.6rem; color: #555; text-transform: uppercase; letter-spacing: 1px; flex-shrink: 0; }}
+      .roster-names {{ font-family: 'DM Mono', monospace; font-size: 0.62rem; color: #333; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }}
+    </style>
+    <div class="card">
+      <div class="meta">{state_html} {guild} · {channel}</div>
+      <div class="teams">
+        {team_a}{ta_score_html}
+        <span class="vs">VS</span>
+        {team_b}{tb_score_html}
+      </div>
+      {extra_html}
+    </div>
+  """, height=130 if state == "lobby" else 95)
+  st.markdown("</div>", unsafe_allow_html=True)
+
+  if state == "live":
+    if st.button("Live →", key=f"live_{mid}", use_container_width=True):
+      st.query_params["live"] = mid
+      st.rerun()
+  else:
+    st.markdown("<div style='height:0.6rem'></div>", unsafe_allow_html=True)
+
+
+def page_live(match_id):
+  render_header()
+  st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
+  col_back, col_ref = st.columns([2, 10])
+  with col_back:
+    if st.button("← Live Matches"):
+      del st.query_params["live"]
+      st.rerun()
+  with col_ref:
+    if st.button("⟳ Refresh", key="live_refresh"):
+      st.cache_data.clear()
+      st.rerun()
+
+  with st.spinner("Loading live data..."):
+    match = fetch_live_match(match_id)
+
+  if not match or "error" in match:
+    st.error(f"Live match unavailable: {match_id}")
+    return
+
+  team_a = match.get("teamAName", "Team A")
+  team_b = match.get("teamBName", "Team B")
+  guild = match.get("guildName", "—")
+  channel = match.get("channelName", "—")
+  innings_summary = match.get("innings", [])
+
+  # Score header
+  ta_scores, tb_scores = [], []
+  for inn in innings_summary:
+    w = inn.get("wickets", 0)
+    score = f"{inn.get('runs', 0)}" if w == 10 else f"{inn.get('runs', 0)}/{w}"
+    if inn.get("isDeclared"): score += "d"
+    if inn.get("battingTeam") == team_a: ta_scores.append(score)
+    elif inn.get("battingTeam") == team_b: tb_scores.append(score)
+  ta_str = " & ".join(ta_scores)
+  tb_str = " & ".join(tb_scores)
+
+  st.markdown(f"""
+    <div style="margin:1.2rem 0 0;padding-bottom:1.2rem;border-bottom:1px solid #1e1e1e;">
+      <div style="display:flex;justify-content:center;align-items:center;gap:2rem;flex-wrap:wrap;">
+        <div style="text-align:right;flex:1;min-width:160px;">
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:2.2rem;color:#e8e8e8;letter-spacing:2px;line-height:1;">{team_a}</div>
+          <div style="font-family:'DM Mono',monospace;font-size:1.3rem;font-weight:500;color:#CC0000;margin-top:0.2rem;">{ta_str or '—'}</div>
+        </div>
+        <div>
+          <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(0,204,102,0.1);border:1px solid rgba(0,204,102,0.2);border-radius:2px;padding:0.2rem 0.7rem;">
+            <span style="width:7px;height:7px;border-radius:50%;background:#00cc66;display:inline-block;animation:pulse 1.2s infinite;"></span>
+            <span style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#00cc66;text-transform:uppercase;letter-spacing:1.5px;">Live</span>
+          </div>
+          <div style="font-family:'DM Mono',monospace;font-size:0.55rem;color:#333;text-transform:uppercase;letter-spacing:1.5px;text-align:center;margin-top:0.4rem;">{guild} · {channel}</div>
+        </div>
+        <div style="text-align:left;flex:1;min-width:160px;">
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:2.2rem;color:#e8e8e8;letter-spacing:2px;line-height:1;">{team_b}</div>
+          <div style="font-family:'DM Mono',monospace;font-size:1.3rem;font-weight:500;color:#CC0000;margin-top:0.2rem;">{tb_str or '—'}</div>
+        </div>
+      </div>
+    </div>
+    <style>@keyframes pulse {{ 0%,100% {{ opacity:1; }} 50% {{ opacity:0.3; }} }}</style>
+  """, unsafe_allow_html=True)
+
+  live_tab, scorecard_tab = st.tabs(["🔴 Live", "📋 Scorecard"])
+
+  # ── LIVE TAB ─────────────────────────────────────────────────────────────
+  with live_tab:
+    current_inning = match.get("currentInning", {})
+    batters = current_inning.get("currentBatters", match.get("currentBatters", []))
+    bowlers = current_inning.get("currentBowlers", match.get("currentBowlers", []))
+    commentary = match.get("commentary", [])
+
+    # Current batters
+    if batters:
+      st.markdown("""
+        <div style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#555;text-transform:uppercase;letter-spacing:2px;margin-bottom:0.6rem;margin-top:1rem;">
+          Batting
+        </div>
+      """, unsafe_allow_html=True)
+      batter_html = "<table class='custom-table'><thead><tr><th>Batter</th><th class='num'>R</th><th class='num'>B</th><th class='num'>SR</th></tr></thead><tbody>"
+      for b in batters:
+        name = b.get("playerName", b.get("name", "—"))
+        runs = b.get("runs", 0)
+        balls = b.get("balls", 0)
+        sr = b.get("strikeRate", (runs / balls * 100) if balls else 0.0)
+        on_strike = b.get("onStrike", False)
+        strike_marker = " <span style='color:#CC0000;font-size:0.7rem;'>*</span>" if on_strike else ""
+        batter_html += f"<tr><td><span style='font-weight:700;color:#e8e8e8;'>{name}{strike_marker}</span></td><td class='num bold'>{runs}</td><td class='num'>{balls}</td><td class='num'>{sr:.1f}</td></tr>"
+      batter_html += "</tbody></table>"
+      st.markdown(batter_html, unsafe_allow_html=True)
+
+    # Current bowlers
+    if bowlers:
+      st.markdown("""
+        <div style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#555;text-transform:uppercase;letter-spacing:2px;margin-bottom:0.6rem;margin-top:1.2rem;">
+          Bowling
+        </div>
+      """, unsafe_allow_html=True)
+      bowler_html = "<table class='custom-table'><thead><tr><th>Bowler</th><th class='num'>O</th><th class='num'>R</th><th class='num'>W</th></tr></thead><tbody>"
+      for b in bowlers:
+        name = b.get("playerName", b.get("name", "—"))
+        overs = b.get("overs", "0.0")
+        runs = b.get("runs", 0)
+        wkts = b.get("wickets", 0)
+        bowling = b.get("isBowling", False)
+        bowling_marker = " <span style='color:#00cc66;font-size:0.7rem;'>↗</span>" if bowling else ""
+        bowler_html += f"<tr><td><span style='font-weight:700;color:#e8e8e8;'>{name}{bowling_marker}</span></td><td class='num'>{overs}</td><td class='num'>{runs}</td><td class='num bold'>{wkts}</td></tr>"
+      bowler_html += "</tbody></table>"
+      st.markdown(bowler_html, unsafe_allow_html=True)
+
+    if not batters and not bowlers:
+      st.markdown("<p style='color:#333;font-size:0.85rem;margin-top:2rem;text-align:center;font-family:DM Mono,monospace;letter-spacing:2px;text-transform:uppercase;'>Awaiting play</p>", unsafe_allow_html=True)
+
+    # Commentary
+    if commentary:
+      st.markdown("""
+        <div style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#555;text-transform:uppercase;letter-spacing:2px;margin-bottom:0.6rem;margin-top:1.8rem;padding-top:1.2rem;border-top:1px solid #1a1a1a;">
+          Recent Commentary
+        </div>
+      """, unsafe_allow_html=True)
+      for i, entry in enumerate(commentary[:10]):
+        ball = entry.get("ball", entry.get("over", ""))
+        text = entry.get("text", entry.get("commentary", str(entry)))
+        is_wicket = "wicket" in text.lower() or "out" in text.lower() or "wkt" in text.lower()
+        is_boundary = any(x in text.lower() for x in ["four", "six", "boundary", "4!", "6!"])
+        accent = "#CC0000" if is_wicket else ("#f5a623" if is_boundary else "#1e1e1e")
+        ball_label = f"<span style='font-family:DM Mono,monospace;font-size:0.62rem;color:#444;flex-shrink:0;min-width:3rem;'>{ball}</span>" if ball else ""
+        st.markdown(f"""
+          <div style="display:flex;gap:0.8rem;align-items:flex-start;padding:0.55rem 0.8rem;border-left:2px solid {accent};background:#141414;margin-bottom:3px;border-radius:0 2px 2px 0;">
+            {ball_label}
+            <span style="font-size:0.83rem;color:{'#ff4444' if is_wicket else ('#f5a623' if is_boundary else '#888')};line-height:1.4;">{text}</span>
+          </div>
+        """, unsafe_allow_html=True)
+
+  # ── SCORECARD TAB ─────────────────────────────────────────────────────────
+  with scorecard_tab:
+    innings_data = match.get("innings", [])
+    if not innings_data:
+      st.markdown("<p style='color:#444;margin-top:2rem;font-size:0.9rem;text-align:center;font-weight:700;text-transform:uppercase;font-family:DM Mono,monospace;letter-spacing:2px;'>Innings not yet started.</p>", unsafe_allow_html=True)
+    else:
+      tab_titles = []
+      t_count_sc = {}
+      for inning in innings_data:
+        bt = inning.get("battingTeam", "Team")
+        t_count_sc[bt] = t_count_sc.get(bt, 0) + 1
+        w = inning.get("wickets", 0)
+        score = f"{inning.get('total', inning.get('runs', 0))}/{w}"
+        if inning.get("isDeclared"): score += "d"
+        ord_str = "1st" if t_count_sc[bt] == 1 else "2nd"
+        tab_titles.append(f"{bt} {ord_str} — {score}")
+      if tab_titles:
+        tabs = st.tabs(tab_titles)
+        for tab, inning in zip(tabs, innings_data):
+          with tab: render_custom_inning(inning)
+
+
 def page_list():
   render_header()
   st.markdown("<div style='height:0.75rem'></div>", unsafe_allow_html=True)
-  query = st.text_input("Query", placeholder="Search matches...", label_visibility="collapsed", key="query_input")
 
-  show_filters = st.session_state.get("show_filters", False)
+  main_tab, live_tab = st.tabs(["📁 Matches", "🔴 Live"])
 
-  # Filter toggle button — native Streamlit, styled via CSS
-  # Inject a marker so we can target the next sibling filter panel
-  st.markdown(f"<div id='filter-anchor' data-open='{'1' if show_filters else '0'}'></div>", unsafe_allow_html=True)
-
-  col_btn, col_rest = st.columns([2, 8])
-  with col_btn:
-    label = "✕ Hide Filters" if show_filters else "⚙ Filters"
-    if st.button(label, key="filter_toggle", type="secondary"):
-      st.session_state["show_filters"] = not show_filters
-      st.rerun()
-
-  # Animated wrapper — CSS transition on max-height driven by data-open attribute
-  # The inner Streamlit columns are rendered inside; the wrapper height animates
-  st.markdown("""
-    <style>
-      /* Animated filter drawer */
-      .filter-drawer {
-        overflow: hidden;
-        transition: max-height 0.38s cubic-bezier(0.4,0,0.2,1),
-                    opacity 0.28s ease,
-                    margin-top 0.3s ease;
-      }
-      .filter-drawer.closed {
-        max-height: 0 !important;
-        opacity: 0;
-        margin-top: 0 !important;
-        pointer-events: none;
-      }
-      .filter-drawer.open {
-        max-height: 120px;
-        opacity: 1;
-        margin-top: 0.5rem;
-      }
-      /* Chevron on the filter toggle button when active */
-      #filter-anchor[data-open='1'] ~ div button[kind="secondary"],
-      #filter-anchor[data-open='1'] ~ div button[data-testid="stBaseButton-secondary"] {
-        border-color: #CC0000 !important;
-        color: #CC0000 !important;
-      }
-      /* Remove gap between match card and scorecard button */
-      .card-wrap { margin-bottom: 0 !important; }
-      .card-wrap + div [data-testid="stButton"] > button {
-        margin-top: 0 !important;
-        border-top: none !important;
-        border-radius: 0 0 2px 2px !important;
-        background: #1a1a1a !important;
-        border-color: #1e1e1e !important;
-        color: #555 !important;
-        font-size: 0.72rem !important;
-        letter-spacing: 1.5px !important;
-        width: 100% !important;
-        padding: 0.5rem !important;
-      }
-      .card-wrap + div [data-testid="stButton"] > button:hover {
-        background: #CC0000 !important;
-        color: #fff !important;
-        border-color: #CC0000 !important;
-      }
-    </style>
-  """, unsafe_allow_html=True)
-
-  drawer_class = "open" if show_filters else "closed"
-  st.markdown(f"<div class='filter-drawer {drawer_class}'>", unsafe_allow_html=True)
-  if show_filters:
-    f1, f2, f3 = st.columns(3)
-    with f1: guild_id = st.text_input("Server", placeholder="Server ID", label_visibility="collapsed", key="fi_guild")
-    with f2: channel_id = st.text_input("Channel", placeholder="Channel ID", label_visibility="collapsed", key="fi_channel")
-    with f3: player_id = st.text_input("Player", placeholder="Player ID", label_visibility="collapsed", key="fi_player")
-  else:
-    guild_id = ""
-    channel_id = ""
-    player_id = ""
-  st.markdown("</div>", unsafe_allow_html=True)
-
-  matches = fetch_matches(query, channel_id, guild_id, player_id)
-  if not matches:
-    st.markdown("<p style='color:#333;font-size:1rem;font-weight:700;text-align:center;margin-top:4rem;text-transform:uppercase;font-family:DM Mono,monospace;letter-spacing:3px;'>No Results Found</p>", unsafe_allow_html=True)
-    return
-
-  st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
-
-  for match in matches:
-    mid = match["id"]
-    team_a = match.get("teamAName", "Team A")
-    team_b = match.get("teamBName", "Team B")
-    ts = match.get("timestamp", 0)
-    ta_scores = []
-    tb_scores = []
-    for inn in match.get("innings", []):
-      w = inn.get("wickets", 0)
-      score = f"{inn.get('runs', 0)}" if w == 10 else f"{inn.get('runs', 0)}/{w}"
-      if inn.get("isDeclared"): score += "d"
-      if inn.get("battingTeam") == team_a: ta_scores.append(score)
-      elif inn.get("battingTeam") == team_b: tb_scores.append(score)
-    res_text = get_result_text(match)
-    guild = match.get("guildName", "")
-    channel = match.get("channelName", "")
-    time_span = f'<span class="ts" data-ts="{ts}"></span>' if ts else ""
-    ta_score_str = ' & '.join(ta_scores)
-    tb_score_str = ' & '.join(tb_scores)
-    ta_score_html = f"<span class='score'>{ta_score_str}</span>" if ta_scores else ""
-    tb_score_html = f"<span class='score'>{tb_score_str}</span>" if tb_scores else ""
-
-    # Card as pure HTML (no key needed, no navigation from inside)
-    st.markdown(f"<div class='card-wrap'>", unsafe_allow_html=True)
-    components.html(f"""
-      <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-      <style>
-        * {{ box-sizing: border-box; margin: 0; padding: 0; }}
-        body {{ background: transparent; }}
-        .card {{
-          background: #161616;
-          border: 1px solid #1e1e1e;
-          border-left: 3px solid #CC0000;
-          padding: 0.85rem 1.1rem 0.8rem;
-        }}
-        .meta {{ font-family: 'DM Mono', monospace; font-size: 0.58rem; color: #3a3a3a; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 0.35rem; }}
-        .teams {{ font-family: 'Bebas Neue', sans-serif; font-size: 1.35rem; letter-spacing: 1.5px; color: #e8e8e8; margin-bottom: 0.45rem; }}
-        .score {{ font-family: 'DM Mono', monospace; color: #CC0000; font-size: 0.88rem; margin-left: 0.3rem; }}
-        .vs {{ color: #2a2a2a; font-size: 0.85rem; margin: 0 0.35rem; }}
-        .result-pill {{
-          display: inline-flex; align-items: center;
-          background: #111; border: 1px solid #1e1e1e;
-          color: #777; font-family: 'DM Mono', monospace;
-          font-size: 0.63rem; padding: 0.2rem 0.65rem;
-          border-radius: 2px; text-transform: uppercase; letter-spacing: 0.5px;
-        }}
-        .res-label {{ color: #CC0000; margin-right: 5px; }}
-      </style>
-      <div class="card">
-        <div class="meta">{time_span} {guild} · {channel}</div>
-        <div class="teams">
-          {team_a}{ta_score_html}
-          <span class="vs">VS</span>
-          {team_b}{tb_score_html}
+  with live_tab:
+    col_ref, _ = st.columns([2, 10])
+    with col_ref:
+      if st.button("⟳ Refresh", key="live_list_refresh"):
+        st.cache_data.clear()
+        st.rerun()
+    live_matches = fetch_live_matches()
+    if not live_matches:
+      st.markdown("""
+        <div style='text-align:center;margin-top:3rem;'>
+          <div style='font-family:DM Mono,monospace;font-size:0.65rem;color:#333;text-transform:uppercase;letter-spacing:3px;'>No Live Matches</div>
+          <div style='font-family:DM Mono,monospace;font-size:0.55rem;color:#222;text-transform:uppercase;letter-spacing:2px;margin-top:0.5rem;'>Check back soon</div>
         </div>
-        <div class="result-pill"><span class="res-label">RES</span>{res_text}</div>
-      </div>
-      <script>
-        document.querySelectorAll('.ts').forEach(function(el) {{
-          var d = new Date(parseInt(el.getAttribute('data-ts')) * 1000);
-          el.textContent = d.toLocaleString([], {{dateStyle:'medium', timeStyle:'short'}}) + ' ·';
-        }});
-      </script>
-    """, height=112)
+      """, unsafe_allow_html=True)
+    else:
+      st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
+      for m in live_matches:
+        render_live_card(m)
+
+  with main_tab:
+    query = st.text_input("Query", placeholder="Search matches...", label_visibility="collapsed", key="query_input")
+
+    show_filters = st.session_state.get("show_filters", False)
+
+    st.markdown(f"<div id='filter-anchor' data-open='{'1' if show_filters else '0'}'></div>", unsafe_allow_html=True)
+
+    col_btn, col_rest = st.columns([2, 8])
+    with col_btn:
+      label = "✕ Hide Filters" if show_filters else "⚙ Filters"
+      if st.button(label, key="filter_toggle", type="secondary"):
+        st.session_state["show_filters"] = not show_filters
+        st.rerun()
+
+    st.markdown("""
+      <style>
+        .filter-drawer {
+          overflow: hidden;
+          transition: max-height 0.38s cubic-bezier(0.4,0,0.2,1),
+                      opacity 0.28s ease,
+                      margin-top 0.3s ease;
+        }
+        .filter-drawer.closed {
+          max-height: 0 !important;
+          opacity: 0;
+          margin-top: 0 !important;
+          pointer-events: none;
+        }
+        .filter-drawer.open {
+          max-height: 120px;
+          opacity: 1;
+          margin-top: 0.5rem;
+        }
+        #filter-anchor[data-open='1'] ~ div button[kind="secondary"],
+        #filter-anchor[data-open='1'] ~ div button[data-testid="stBaseButton-secondary"] {
+          border-color: #CC0000 !important;
+          color: #CC0000 !important;
+        }
+        .card-wrap { margin-bottom: 0 !important; }
+        .card-wrap + div [data-testid="stButton"] > button {
+          margin-top: 0 !important;
+          border-top: none !important;
+          border-radius: 0 0 2px 2px !important;
+          background: #1a1a1a !important;
+          border-color: #1e1e1e !important;
+          color: #555 !important;
+          font-size: 0.72rem !important;
+          letter-spacing: 1.5px !important;
+          width: 100% !important;
+          padding: 0.5rem !important;
+        }
+        .card-wrap + div [data-testid="stButton"] > button:hover {
+          background: #CC0000 !important;
+          color: #fff !important;
+          border-color: #CC0000 !important;
+        }
+      </style>
+    """, unsafe_allow_html=True)
+
+    drawer_class = "open" if show_filters else "closed"
+    st.markdown(f"<div class='filter-drawer {drawer_class}'>", unsafe_allow_html=True)
+    if show_filters:
+      f1, f2, f3 = st.columns(3)
+      with f1: guild_id = st.text_input("Server", placeholder="Server ID", label_visibility="collapsed", key="fi_guild")
+      with f2: channel_id = st.text_input("Channel", placeholder="Channel ID", label_visibility="collapsed", key="fi_channel")
+      with f3: player_id = st.text_input("Player", placeholder="Player ID", label_visibility="collapsed", key="fi_player")
+    else:
+      guild_id = ""
+      channel_id = ""
+      player_id = ""
     st.markdown("</div>", unsafe_allow_html=True)
 
-    # Native button for navigation — styled via CSS above to look flush with the card
-    if st.button("Scorecard →", key=f"sc_{mid}", use_container_width=True):
-      st.query_params["id"] = mid
-      st.rerun()
+    matches = fetch_matches(query, channel_id, guild_id, player_id)
+    if not matches:
+      st.markdown("<p style='color:#333;font-size:1rem;font-weight:700;text-align:center;margin-top:4rem;text-transform:uppercase;font-family:DM Mono,monospace;letter-spacing:3px;'>No Results Found</p>", unsafe_allow_html=True)
+      return
 
-    st.markdown("<div style='height:0.6rem'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
+
+    for match in matches:
+      mid = match["id"]
+      team_a = match.get("teamAName", "Team A")
+      team_b = match.get("teamBName", "Team B")
+      ts = match.get("timestamp", 0)
+      ta_scores = []
+      tb_scores = []
+      for inn in match.get("innings", []):
+        w = inn.get("wickets", 0)
+        score = f"{inn.get('runs', 0)}" if w == 10 else f"{inn.get('runs', 0)}/{w}"
+        if inn.get("isDeclared"): score += "d"
+        if inn.get("battingTeam") == team_a: ta_scores.append(score)
+        elif inn.get("battingTeam") == team_b: tb_scores.append(score)
+      res_text = get_result_text(match)
+      guild = match.get("guildName", "")
+      channel = match.get("channelName", "")
+      time_span = f'<span class="ts" data-ts="{ts}"></span>' if ts else ""
+      ta_score_str = ' & '.join(ta_scores)
+      tb_score_str = ' & '.join(tb_scores)
+      ta_score_html = f"<span class='score'>{ta_score_str}</span>" if ta_scores else ""
+      tb_score_html = f"<span class='score'>{tb_score_str}</span>" if tb_scores else ""
+
+      st.markdown(f"<div class='card-wrap'>", unsafe_allow_html=True)
+      components.html(f"""
+        <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+        <style>
+          * {{ box-sizing: border-box; margin: 0; padding: 0; }}
+          body {{ background: transparent; }}
+          .card {{
+            background: #161616;
+            border: 1px solid #1e1e1e;
+            border-left: 3px solid #CC0000;
+            padding: 0.85rem 1.1rem 0.8rem;
+          }}
+          .meta {{ font-family: 'DM Mono', monospace; font-size: 0.58rem; color: #3a3a3a; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 0.35rem; }}
+          .teams {{ font-family: 'Bebas Neue', sans-serif; font-size: 1.35rem; letter-spacing: 1.5px; color: #e8e8e8; margin-bottom: 0.45rem; }}
+          .score {{ font-family: 'DM Mono', monospace; color: #CC0000; font-size: 0.88rem; margin-left: 0.3rem; }}
+          .vs {{ color: #2a2a2a; font-size: 0.85rem; margin: 0 0.35rem; }}
+          .result-pill {{
+            display: inline-flex; align-items: center;
+            background: #111; border: 1px solid #1e1e1e;
+            color: #777; font-family: 'DM Mono', monospace;
+            font-size: 0.63rem; padding: 0.2rem 0.65rem;
+            border-radius: 2px; text-transform: uppercase; letter-spacing: 0.5px;
+          }}
+          .res-label {{ color: #CC0000; margin-right: 5px; }}
+        </style>
+        <div class="card">
+          <div class="meta">{time_span} {guild} · {channel}</div>
+          <div class="teams">
+            {team_a}{ta_score_html}
+            <span class="vs">VS</span>
+            {team_b}{tb_score_html}
+          </div>
+          <div class="result-pill"><span class="res-label">RES</span>{res_text}</div>
+        </div>
+        <script>
+          document.querySelectorAll('.ts').forEach(function(el) {{
+            var d = new Date(parseInt(el.getAttribute('data-ts')) * 1000);
+            el.textContent = d.toLocaleString([], {{dateStyle:'medium', timeStyle:'short'}}) + ' ·';
+          }});
+        </script>
+      """, height=112)
+      st.markdown("</div>", unsafe_allow_html=True)
+
+      if st.button("Scorecard →", key=f"sc_{mid}", use_container_width=True):
+        st.query_params["id"] = mid
+        st.rerun()
+
+      st.markdown("<div style='height:0.6rem'></div>", unsafe_allow_html=True)
+
 
 params = st.query_params
 match_id = params.get("id", None)
+live_id = params.get("live", None)
 if match_id:
   page_scorecard(match_id)
+elif live_id:
+  page_live(live_id)
 else:
   page_list()
