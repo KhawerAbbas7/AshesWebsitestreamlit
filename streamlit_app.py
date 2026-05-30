@@ -1,6 +1,7 @@
 import streamlit as st
 import requests
 import streamlit.components.v1 as components
+from streamlit_autorefresh import st_autorefresh
 
 logo = "40ef4cf2ee6a72db2a5af55c231192bd.png"
 BASE = "http://51.75.118.79:20375"
@@ -476,10 +477,14 @@ def render_live_card(match):
       st.query_params["live"] = mid
       st.rerun()
   else:
-    st.markdown("<div style='height:0.6rem'></div>", unsafe_allow_html=True)
+    if st.button("Lobby →", key=f"lobby_{mid}", use_container_width=True):
+      st.query_params["live"] = mid
+      st.rerun()
+  st.markdown("<div style='height:0.6rem'></div>", unsafe_allow_html=True)
 
 
 def page_live(match_id):
+  st_autorefresh(interval=10000, key="live_autorefresh")
   render_header()
   st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
   col_back, col_ref = st.columns([2, 10])
@@ -639,6 +644,7 @@ def page_list():
   main_tab, live_tab = st.tabs(["📁 Matches", "🔴 Live"])
 
   with live_tab:
+    st_autorefresh(interval=15000, key="live_list_autorefresh")
     col_ref, _ = st.columns([2, 10])
     with col_ref:
       if st.button("⟳ Refresh", key="live_list_refresh"):
