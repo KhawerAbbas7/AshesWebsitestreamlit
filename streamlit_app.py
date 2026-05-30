@@ -231,6 +231,14 @@ def fetch_live_match(match_id):
   except Exception:
     return {}
 
+@st.cache_data(ttl=120)
+def fetch_leaderboard(category):
+  try:
+    r = requests.get(f"{BASE}/leaderboard", params={"category": category, "limit": 15}, timeout=8)
+    return r.json()
+  except Exception:
+    return {}
+
 def get_result_text(match):
   w = match.get("winner", "—")
   if w.lower() in ["drawn", "—", "tie", "tied"]: return w
@@ -637,11 +645,125 @@ def page_live(match_id):
           with tab: render_custom_inning(inning)
 
 
+def page_leaderboard():
+  render_header()
+  st.markdown("<div style='height:0.75rem'></div>", unsafe_allow_html=True)
+  if st.button("← Matches"):
+    st.query_params.clear()
+    st.rerun()
+
+  CATEGORIES = {
+    "Most Runs":               "most_runs",
+    "Most Wickets":            "most_wickets",
+    "Most Matches":            "most_matches",
+    "Most MVPs":               "most_mvps",
+    "Highest Batting AVG":     "highest_bat_avg",
+    "Highest Batting SR":      "highest_bat_sr",
+    "Best Bowling AVG":        "best_bowl_avg",
+    "Best Bowling ECO":        "best_bowl_eco",
+    "Best Bowling SR":         "best_bowl_sr",
+    "Most 30s":                "most_30s",
+    "Most 50s":                "most_50s",
+    "Most 4s":                 "most_4s",
+    "Most 6s":                 "most_6s",
+    "Most 3-fers":             "most_3fers",
+    "Most 5-fers":             "most_5fers",
+    "Most Hattricks":          "most_hattricks",
+    "Fastest 50s":             "fastest_50s",
+    "Fastest 30s":             "fastest_30s",
+    "Best Batting Inning":     "best_bat_inning",
+    "Best Bowling Inning":     "best_bowl_inning",
+    "Highest SR in an Inning": "highest_sr_inning",
+    "Best Partnerships (Inning)":  "best_partnerships_inning",
+    "Best Partnerships (Overall)": "best_partnerships_overall",
+    "Highest Match Aggregates":    "highest_match_aggregate",
+  }
+
+  selected_label = st.selectbox(
+    "Category",
+    list(CATEGORIES.keys()),
+    label_visibility="collapsed",
+    key="lb_category"
+  )
+  category_key = CATEGORIES[selected_label]
+
+  with st.spinner("Loading..."):
+    result = fetch_leaderboard(category_key)
+
+  if not result or "error" in result:
+    st.markdown("<p style='color:#444;font-size:0.9rem;text-align:center;margin-top:2rem;font-family:DM Mono,monospace;letter-spacing:2px;text-transform:uppercase;'>No data available.</p>", unsafe_allow_html=True)
+    return
+
+  title = result.get("title", selected_label)
+  note = result.get("note")
+  cols = result.get("cols", [])
+  data = result.get("data", [])
+
+  st.markdown(f"""
+    <div style="margin:1rem 0 0.5rem;">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:1.8rem;color:#e8e8e8;letter-spacing:2px;line-height:1;">{title}</div>
+      {f'<div style="font-family:DM Mono,monospace;font-size:0.6rem;color:#444;text-transform:uppercase;letter-spacing:2px;margin-top:4px;">{note}</div>' if note else ''}
+    </div>
+  """, unsafe_allow_html=True)
+
+  if not data:
+    st.markdown("<p style='color:#333;font-size:0.85rem;text-align:center;margin-top:2rem;font-family:DM Mono,monospace;letter-spacing:2px;text-transform:uppercase;'>No entries yet.</p>", unsafe_allow_html=True)
+    return
+
+  # Build table HTML
+  # Determine display columns dynamically from first row
+  sample = data[0]
+  is_partnership = 'player2' in sample
+  is_match = 'matchId' in sample
+
+  th_cells = "<th>#</th>"
+  if is_partnership:
+    th_cells += "<th>Batters</th>"
+  elif is_match:
+    th_cells += "<th>Match</th>"
+  else:
+    th_cells += "<th>Player</th>"
+
+  # remaining numeric/string cols (skip player keys, rank, matchId)
+  skip = {'rank', 'player', 'player2', 'playerAvatar', 'player2Avatar', 'matchId'}
+  extra_cols = [k for k in sample.keys() if k not in skip]
+  for col in extra_cols:
+    th_cells += f"<th class='num'>{col.upper()}</th>"
+
+  rows_html = ""
+  for entry in data:
+    rank = entry.get("rank", "")
+    if is_partnership:
+      name = f"{entry.get('player','—')} &amp; {entry.get('player2','—')}"
+    elif is_match:
+      mid = entry.get('matchId','—')
+      name = f"<span style='font-family:DM Mono,monospace;font-size:0.7rem;color:#555;'>{mid[:12]}…</span>"
+    else:
+      name = entry.get("player", "—")
+
+    td_rank = f"<td style='color:#444;font-family:DM Mono,monospace;font-size:0.75rem;'>{rank}</td>"
+    td_name = f"<td class='bold'>{name}</td>"
+    td_extras = ""
+    for col in extra_cols:
+      val = entry.get(col, "—")
+      td_extras += f"<td class='num'>{val}</td>"
+
+    rows_html += f"<tr>{td_rank}{td_name}{td_extras}</tr>"
+
+  table_html = f"""
+    <table class='custom-table'>
+      <thead><tr>{th_cells}</tr></thead>
+      <tbody>{rows_html}</tbody>
+    </table>
+  """
+  st.markdown(table_html, unsafe_allow_html=True)
+
+
 def page_list():
   render_header()
   st.markdown("<div style='height:0.75rem'></div>", unsafe_allow_html=True)
 
-  main_tab, live_tab = st.tabs(["📁 Matches", "🔴 Live"])
+  main_tab, live_tab, lb_tab = st.tabs(["📁 Matches", "🔴 Live", "🏆 Leaderboard"])
 
   with live_tab:
     st_autorefresh(interval=15000, key="live_list_autorefresh")
@@ -662,6 +784,11 @@ def page_list():
       st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
       for m in live_matches:
         render_live_card(m)
+
+  with lb_tab:
+    if st.button("Open Full Leaderboard →", key="lb_goto", use_container_width=False):
+      st.query_params["page"] = "leaderboard"
+      st.rerun()
 
   with main_tab:
     query = st.text_input("Query", placeholder="Search matches...", label_visibility="collapsed", key="query_input")
@@ -817,9 +944,12 @@ def page_list():
 params = st.query_params
 match_id = params.get("id", None)
 live_id = params.get("live", None)
+page = params.get("page", None)
 if match_id:
   page_scorecard(match_id)
 elif live_id:
   page_live(live_id)
+elif page == "leaderboard":
+  page_leaderboard()
 else:
   page_list()
