@@ -4,7 +4,7 @@ import streamlit.components.v1 as components
 from streamlit_autorefresh import st_autorefresh
 
 logo = "40ef4cf2ee6a72db2a5af55c231192bd.png"
-BASE = "http://129.80.180.202:20375"
+BASE = "http://129.80.180.202:8000"
 st.set_page_config(page_title="Ashes", page_icon=logo, layout="wide")
 st.markdown("""
   <style>
